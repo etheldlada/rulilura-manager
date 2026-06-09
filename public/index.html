@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RuLiLuRa Manager - 幻奏戦記キャラクター管理</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>⚙ RuLiLuRa Manager <span>幻奏戦記ノイシュタルト</span></h1>
+    <nav id="nav-links"></nav>
+  </header>
+
+  <main>
+    <!-- 認証ページ -->
+    <div id="page-auth" class="page">
+      <div id="auth-page">
+        <div class="auth-box" id="auth-box"></div>
+      </div>
+    </div>
+
+    <!-- マイページ -->
+    <div id="page-mypage" class="page">
+      <div id="mypage-content"></div>
+    </div>
+
+    <!-- 公開一覧 -->
+    <div id="page-public" class="page">
+      <div id="public-content"></div>
+    </div>
+  </main>
+</div>
+
+<!-- モーダル -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title"></h3>
+      <button class="modal-close" onclick="ModalManager.close()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<script src="/js/gamedata.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/hero-form.js"></script>
+<script src="/js/singer-form.js"></script>
+<script src="/js/armor-form.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

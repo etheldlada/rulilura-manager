@@ -1,0 +1,17 @@
+{
+  "name": "rulilura-manager",
+  "version": "1.0.0",
+  "description": "RPG RuLiLuRa ノイシュタルト キャラクター管理システム",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "bcryptjs": "^2.4.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.0"
+  }
+}
