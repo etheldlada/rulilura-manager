@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const { initDb } = require('./db/database');
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
@@ -19,4 +20,16 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`RuLiLuRa Manager running on http://localhost:${PORT}`));
+
+// DB初期化してからサーバー起動
+initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`RuLiLuRa Manager running on http://localhost:${PORT}`);
+      console.log(`DB: ${process.env.TURSO_URL || 'file:./data/rulilura.db (local)'}`);
+    });
+  })
+  .catch(err => {
+    console.error('DB初期化に失敗しました:', err);
+    process.exit(1);
+  });

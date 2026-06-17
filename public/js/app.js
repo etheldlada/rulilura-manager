@@ -27,6 +27,7 @@ const App = {
     if (this.currentPage === 'auth') this.renderAuth();
     if (this.currentPage === 'mypage' && loggedIn) this.renderMypage();
     if (this.currentPage === 'public') this.renderPublic();
+    // detail/edit/ccfoliaはgoto時に直接レンダリングするため省略
   },
 
   goto(page) {
@@ -186,7 +187,7 @@ const App = {
     }
 
     return `
-      <div class="char-card" onclick="App.openViewModal('${type}','${item.id}')">
+      <div class="char-card" onclick="App.gotoDetail('${type}','${item.id}')">
         <div class="char-card-header">
           <span class="type-badge ${badgeCls}">${label}</span>
           <span class="char-card-name">${d.name}</span>
@@ -197,9 +198,9 @@ const App = {
         ${type==='armor' ? `<div class="char-card-meta">${d.model||''} ${d.workshop||''}</div>` : ''}
         ${statsHtml}
         <div class="card-actions">
-          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();App.openEditModal('${type}','${item.id}')">編集</button>
+          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();App.gotoEdit('${type}','${item.id}')">編集</button>
           <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();App.togglePublic('${type}','${item.id}',${isPublic})">${isPublic?'非公開に':'公開する'}</button>
-          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();App.showCcfoliaJSON('${type}','${item.id}')">ccfolia</button>
+          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();App.gotoCcfolia('${type}','${item.id}')">ccfolia</button>
           <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();App.showShareURL('${type}','${item.id}','${item.share_token}')">共有URL</button>
           <button class="btn btn-sm btn-danger"    onclick="event.stopPropagation();App.deleteChar('${type}','${item.id}')">削除</button>
         </div>
@@ -230,7 +231,7 @@ const App = {
             const d = item.data;
             const type = item._type;
             const label = type==='hero'?'英雄':type==='singer'?'歌姫':'奏甲';
-            return `<div class="char-card" onclick="App.openViewModal('${type}','${item.id}')">
+            return `<div class="char-card" onclick="App.gotoDetail('${type}','${item.id}')">
               <div class="char-card-header">
                 <span class="type-badge badge-${type}">${label}</span>
                 <span class="char-card-name">${d.name}</span>
@@ -243,83 +244,173 @@ const App = {
     }
   },
 
-  // ===== モーダル: 作成/編集 =====
-  openCreateModal(type) {
-    this.editingId = null;
-    this.editingType = type;
-    const label = type==='hero'?'英雄':type==='singer'?'歌姫':'奏甲';
-    const form = type==='hero' ? HeroForm.renderForm() : type==='singer' ? SingerForm.renderForm() : ArmorForm.renderForm();
-
-    ModalManager.open(`新規${label}作成`, form, [
-      { label: '保存', cls: `btn-${type}`, action: () => App.saveChar(type, null) },
-      { label: 'キャンセル', cls: 'btn-secondary', action: () => ModalManager.close() },
-    ]);
-
-    if (type==='hero') HeroForm.attachAutoCalc();
-    if (type==='singer') SingerForm.attachAutoCalc();
-    if (type==='armor') ArmorForm.attachAutoCalc();
-  },
-
-  async openEditModal(type, id) {
+  // ===== 詳細ページへ遷移 =====
+  async gotoDetail(type, id) {
     const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}/${id}`;
     const item = await API.get(endpoint).catch(() => null);
     if (!item) return;
-
-    this.editingId = id;
-    this.editingType = type;
-    const label = type==='hero'?'英雄':type==='singer'?'歌姫':'奏甲';
-    const form = type==='hero' ? HeroForm.renderForm(item.data) : type==='singer' ? SingerForm.renderForm(item.data) : ArmorForm.renderForm(item.data);
-
-    ModalManager.open(`${label}編集`, form, [
-      { label: '保存', cls: `btn-${type}`, action: () => App.saveChar(type, id) },
-      { label: 'キャンセル', cls: 'btn-secondary', action: () => ModalManager.close() },
-    ]);
-
-    if (type==='hero') HeroForm.attachAutoCalc();
-    if (type==='singer') SingerForm.attachAutoCalc();
-    if (type==='armor') ArmorForm.attachAutoCalc();
-  },
-
-  async saveChar(type, id) {
-    const data = type==='hero' ? HeroForm.collectForm() : type==='singer' ? SingerForm.collectForm() : ArmorForm.collectForm();
-    if (!data || !data.name) { alert('名前は必須です'); return; }
-
-    const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}`;
-    try {
-      if (id) await API.put(`${endpoint}/${id}`, { data });
-      else     await API.post(endpoint, { data });
-      ModalManager.close();
-      this.renderMypage();
-    } catch(e) {
-      alert('保存に失敗しました: ' + e.message);
+    // 現在の画面を「前のページ」として記録（detail/edit/ccfolia以外）
+    if (!['detail','edit','ccfolia'].includes(this.currentPage)) {
+      this._prevPage = this.currentPage;
     }
+    this._detailItem = item;
+    this._detailType = type;
+    this.currentPage = 'detail';
+    this.render();
+    this._renderDetailPage(item, type);
+    window.scrollTo(0, 0);
   },
 
-  // ===== モーダル: 詳細表示 =====
-  async openViewModal(type, id) {
-    const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}/${id}`;
-    const item = await API.get(endpoint).catch(() => null);
-    if (!item) return;
+  _renderDetailPage(item, type) {
+    const el = document.getElementById('detail-content');
+    if (!el) return;
     const d = item.data;
     const label = type==='hero'?'英雄':type==='singer'?'歌姫':'奏甲';
+    const isOwner = Auth.isLoggedIn && Auth.user?.id === item.user_id;
+    const backPage = this._prevPage || 'mypage';
 
     let html = '';
     if (type === 'hero') html = this.heroDetailHTML(d, item);
     else if (type === 'singer') html = this.singerDetailHTML(d, item);
     else html = this.armorDetailHTML(d, item);
 
-    const btns = [];
-    if (Auth.isLoggedIn && Auth.user.id === item.user_id) {
-      btns.push({ label: '編集', cls: 'btn-secondary', action: () => { ModalManager.close(); App.openEditModal(type, id); } });
-    }
-    btns.push({ label: '閉じる', cls: 'btn-secondary', action: () => ModalManager.close() });
+    el.innerHTML = `
+      <div class="page-header">
+        <button class="btn btn-secondary btn-sm" onclick="App.goto('${backPage}')">← 戻る</button>
+        <h2><span class="type-badge badge-${type}" style="font-size:.8rem;margin-right:.5rem">${label}</span>${d.name}</h2>
+        <div class="page-header-actions">
+          ${isOwner ? `
+            <button class="btn btn-secondary btn-sm" onclick="App.gotoEdit('${type}','${item.id}')">編集</button>
+            <button class="btn btn-secondary btn-sm" onclick="App.togglePublic('${type}','${item.id}',${item.is_public})">${item.is_public?'非公開に':'公開する'}</button>
+          ` : ''}
+          <button class="btn btn-secondary btn-sm" onclick="App.gotoCcfolia('${type}','${item.id}')">ccfolia</button>
+          ${isOwner ? `<button class="btn btn-secondary btn-sm" onclick="App.showShareURL('${type}','${item.id}','${item.share_token}')">共有URL</button>` : ''}
+          ${isOwner ? `<button class="btn btn-danger btn-sm" onclick="App.deleteChar('${type}','${item.id}')">削除</button>` : ''}
+        </div>
+      </div>
+      ${html}`;
+  },
 
-    ModalManager.open(`${label}詳細: ${d.name}`, html, btns);
+  // ===== 作成ページへ遷移 =====
+  openCreateModal(type) {
+    this._prevPage = this.currentPage;
+    this.editingId = null;
+    this.editingType = type;
+    this.currentPage = 'edit';
+    this.render();
+    this._renderEditPage(type, null, null);
+    window.scrollTo(0, 0);
+  },
+
+  // ===== 編集ページへ遷移 =====
+  async gotoEdit(type, id) {
+    this._prevPage = this.currentPage;
+    const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}/${id}`;
+    const item = await API.get(endpoint).catch(() => null);
+    if (!item) return;
+    this.editingId = id;
+    this.editingType = type;
+    this.currentPage = 'edit';
+    this.render();
+    this._renderEditPage(type, id, item.data);
+    window.scrollTo(0, 0);
+  },
+
+  // 後方互換（カードの編集ボタン）
+  async openEditModal(type, id) { return this.gotoEdit(type, id); },
+
+  _renderEditPage(type, id, data) {
+    const el = document.getElementById('edit-content');
+    if (!el) return;
+    const label = type==='hero'?'英雄':type==='singer'?'歌姫':'奏甲';
+    const isNew = !id;
+    const backPage = this._prevPage || 'mypage';
+
+    const form = type==='hero'   ? HeroForm.renderForm(data)
+               : type==='singer' ? SingerForm.renderForm(data)
+               :                   ArmorForm.renderForm(data);
+
+    el.innerHTML = `
+      <div class="edit-page-inner">
+        <div class="page-header">
+          <button class="btn btn-secondary btn-sm" onclick="App._cancelEdit()">← キャンセル</button>
+          <h2>${isNew ? `新規${label}作成` : `${label}編集: ${data?.name||''}`}</h2>
+        </div>
+        ${form}
+        <div class="edit-footer">
+          <button class="btn btn-secondary" onclick="App._cancelEdit()">キャンセル</button>
+          <button class="btn btn-${type}" onclick="App.saveChar('${type}','${id||''}')">保存する</button>
+        </div>
+      </div>`;
+
+    if (type==='hero')   HeroForm.attachAutoCalc();
+    if (type==='singer') SingerForm.attachAutoCalc();
+    if (type==='armor')  ArmorForm.attachAutoCalc();
+  },
+
+  _cancelEdit() {
+    const prev = this._prevPage || 'mypage';
+    // 詳細ページから来た場合は詳細に戻る
+    if (prev === 'detail' && this._detailItem && this._detailType) {
+      this.gotoDetail(this._detailType, this._detailItem.id);
+    } else {
+      this.goto(prev);
+    }
+  },
+
+  async saveChar(type, id) {
+    const data = type==='hero'   ? HeroForm.collectForm()
+               : type==='singer' ? SingerForm.collectForm()
+               :                   ArmorForm.collectForm();
+    if (!data || !data.name) { alert('名前は必須です'); return; }
+
+    const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}`;
+    try {
+      let saved;
+      if (id) saved = await API.put(`${endpoint}/${id}`, { data });
+      else     saved = await API.post(endpoint, { data });
+      // 保存後は詳細ページへ遷移
+      await this.gotoDetail(type, saved.id);
+    } catch(e) {
+      alert('保存に失敗しました: ' + e.message);
+    }
   },
 
   heroDetailHTML(d, item) {
     const ab = d.abilities || {};
     const mods = d.modifiers || {};
+    // 英雄能力：新形式（hero_abilities配列）と旧形式（abilities_memoテキスト）の両方に対応
+    const heroAbilitiesHTML = (() => {
+      if (d.hero_abilities && d.hero_abilities.length > 0) {
+        const rows = d.hero_abilities.map(a => `
+          <tr>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);white-space:nowrap">
+              <span style="font-size:.72rem;color:var(--text-dim);margin-right:.3rem">${a.no}.</span><strong>${a.name}</strong>
+            </td>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text-dim)">
+              ${(HERO_ABILITIES_CATALOG.find(c=>c.no===a.no)?.summary)||''}
+            </td>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem">${a.memo||''}</td>
+          </tr>`).join('');
+        return `<div class="form-section"><h4>英雄能力（${d.hero_abilities.length}個）</h4>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:400px">
+              <thead><tr>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left;white-space:nowrap">能力名</th>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果</th>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">メモ</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div></div>`;
+      }
+      // 旧形式フォールバック
+      if (d.abilities_memo) {
+        return `<div class="form-section"><h4>英雄能力</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.abilities_memo}</pre></div>`;
+      }
+      return '';
+    })();
+
     return `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
         <div>
@@ -351,21 +442,106 @@ const App = {
           </div>
         </div>
       </div>
-      ${d.weapons?.length ? `<div class="form-section"><h4>武器</h4>
-        <table style="width:100%;font-size:.82rem;border-collapse:collapse">
+      ${d.weapons?.length ? `<div class="form-section"><h4>個人武器</h4>
+        <div style="overflow-x:auto"><table style="width:100%;font-size:.82rem;border-collapse:collapse;min-width:360px">
           <thead><tr>${['武器名','命中値','ダメージ','射程'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
           <tbody>${d.weapons.map(w=>`<tr>${[w.name,w.hit,w.damage,w.range].map(v=>`<td style="padding:.3rem;border-bottom:1px solid var(--border)">${v||'-'}</td>`).join('')}</tr>`).join('')}</tbody>
-        </table></div>` : ''}
-      ${d.abilities_memo ? `<div class="form-section"><h4>英雄能力</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.abilities_memo}</pre></div>` : ''}
+        </table></div></div>` : ''}
+      ${heroAbilitiesHTML}
       ${d.skills && Object.keys(d.skills).length ? `<div class="form-section"><h4>スキル</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.3rem;font-size:.82rem">
           ${Object.entries(d.skills).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem .5rem;background:var(--surface);border-radius:4px"><span>${k}</span><strong>${v} <span style="color:var(--text-dim)">(${50+v})</span></strong></div>`).join('')}
-        </div></div>` : ''}`;
+        </div></div>` : ''}
+      ${d.equipment ? `<div class="form-section"><h4>装備品</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.equipment}</pre></div>` : ''}
+      ${d.notes ? `<div class="form-section"><h4>メモ</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.notes}</pre></div>` : ''}`;
   },
 
   singerDetailHTML(d, item) {
-    const ab = d.abilities || {};
-    const gauges = d.gauges || {};
+    const ab     = d.abilities || {};
+    const gauges = d.gauges    || {};
+    const mods   = d.modifiers || {};
+
+    // 歌姫能力表示
+    const singerAbilitiesHTML = (() => {
+      if (d.singer_abilities && d.singer_abilities.length > 0) {
+        const rows = d.singer_abilities.map(a => `
+          <tr>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);white-space:nowrap">
+              <span style="font-size:.72rem;color:var(--text-dim);margin-right:.3rem">${a.no}.</span><strong>${a.name}</strong>
+            </td>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text-dim)">
+              ${SINGER_ABILITIES_CATALOG.find(c=>c.no===a.no)?.summary||''}
+            </td>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem">${a.memo||''}</td>
+          </tr>`).join('');
+        return `<div class="form-section"><h4>歌姫能力（${d.singer_abilities.length}個）</h4>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:400px">
+              <thead><tr>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left;white-space:nowrap">能力名</th>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果</th>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">メモ</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div></div>`;
+      }
+      if (d.abilities_memo) {
+        return `<div class="form-section"><h4>歌姫能力</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.abilities_memo}</pre></div>`;
+      }
+      return '';
+    })();
+
+    // 歌術表示
+    const singerSongsHTML = (() => {
+      if (d.singer_songs && d.singer_songs.length > 0) {
+        const rows = d.singer_songs.map(s => {
+          const catalog = SONGS_CATALOG.find(c => c.no === s.no);
+          const effectText = catalog ? (catalog.effects[s.rank] || '') : '';
+          return `
+          <tr>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border)"><strong>${s.name||''}</strong></td>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);text-align:center">
+              <span style="background:var(--singer);color:#fff;font-size:.72rem;padding:.1rem .4rem;border-radius:3px">R${s.rank||1}</span>
+            </td>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text-dim)">${effectText}</td>
+            <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem">${s.memo||''}</td>
+          </tr>`;}).join('');
+        return `<div class="form-section"><h4>歌術（${d.singer_songs.length}種）</h4>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:500px">
+              <thead><tr>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">歌術名</th>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:center;width:60px">ランク</th>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果</th>
+                <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">メモ</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div></div>`;
+      }
+      if (d.songs) {
+        return `<div class="form-section"><h4>歌術</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.songs}</pre></div>`;
+      }
+      return '';
+    })();
+
+    // 戦闘系歌姫：武器・装備
+    const combatHTML = (() => {
+      const hasWeapons  = d.weapons && d.weapons.length > 0;
+      const hasEquip    = !!d.equipment;
+      if (!hasWeapons && !hasEquip) return '';
+      return `<div class="form-section" style="border-color:var(--singer)">
+        <h4 style="color:var(--singer)">⚔ 戦闘系歌姫：武器・装備</h4>
+        ${hasWeapons ? `<div style="overflow-x:auto;margin-bottom:.5rem">
+          <table style="width:100%;font-size:.82rem;border-collapse:collapse;min-width:380px">
+            <thead><tr>${['武器名','命中値','スキル','ダメージ','射程'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
+            <tbody>${d.weapons.map(w=>`<tr>${[w.name,w.hit,w.skill,w.damage,w.range].map(v=>`<td style="padding:.3rem;border-bottom:1px solid var(--border)">${v||'-'}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table></div>` : ''}
+        ${hasEquip ? `<div style="font-size:.83rem"><strong style="color:var(--text-dim)">防具・装備：</strong>${d.equipment}</div>` : ''}
+      </div>`;
+    })();
+
     return `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
         <div>
@@ -379,47 +555,120 @@ const App = {
               ${ABILITY_NAMES.map(n=>`<div style="display:flex;justify-content:space-between;padding:.2rem .4rem;background:var(--surface);border-radius:4px"><span style="color:var(--text-dim)">${n}</span><strong>${ab[n]||10}<span style="font-size:.75rem;color:var(--text-dim)"> (${(ab[n]||10)-10>=0?'+':''}${(ab[n]||10)-10})</span></strong></div>`).join('')}
             </div>
           </div>
+          <div class="form-section"><h4>戦闘修正</h4>
+            <div style="font-size:.85rem">
+              ${[['白兵',mods.melee||0],['射撃',mods.ranged||0],['回避',mods.evasion||0],['抵抗',mods.resistance||0],['防御値',mods.defense||0]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">${k}</span><strong>${v>=0?'+':''}${v}</strong></div>`).join('')}
+            </div>
+          </div>
         </div>
         <div>
           <div class="form-section"><h4>消耗ゲージ</h4>
-            ${['肉体','気力','絆'].map(g=>`<div style="margin-bottom:.5rem;padding:.4rem;background:var(--surface);border-radius:4px"><strong style="color:var(--accent2)">${g}</strong>
-              <span style="font-size:.82rem;margin-left:.5rem;color:var(--text-dim)">消耗値:${gauges[g]?.cost||9} / 獲得値:${gauges[g]?.gain||9} / ゲージ数:${gauges[g]?.boxes||3}</span></div>`).join('')}
+            ${['肉体','気力','絆'].map(g=>`<div style="margin-bottom:.5rem;padding:.4rem;background:var(--surface);border-radius:4px">
+              <strong style="color:var(--accent2)">${g}</strong>
+              <span style="font-size:.82rem;margin-left:.5rem;color:var(--text-dim)">消耗値:${gauges[g]?.cost||9} / 獲得値:${gauges[g]?.gain||9} / ゲージ数:${gauges[g]?.boxes||3}</span>
+            </div>`).join('')}
+          </div>
+          <div class="form-section"><h4>HP</h4>
+            <div class="hp-row">
+              <div class="hp-block"><span>通常HP</span><strong>${d.hp?.normal||0}</strong></div>
+              <div class="hp-block"><span>負傷HP</span><strong>${d.hp?.injured||0}</strong></div>
+            </div>
           </div>
           ${d.skills && Object.keys(d.skills).length ? `<div class="form-section"><h4>スキル</h4>
             <div style="font-size:.82rem">
-              ${Object.entries(d.skills).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.15rem .3rem"><span>${k}</span><strong>${v}(${50+v})</strong></div>`).join('')}
+              ${Object.entries(d.skills).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.15rem .3rem"><span>${k}</span><strong>${v} <span style="color:var(--text-dim)">(${50+v})</span></strong></div>`).join('')}
             </div></div>` : ''}
         </div>
       </div>
-      ${d.abilities_memo ? `<div class="form-section"><h4>歌姫能力</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.abilities_memo}</pre></div>` : ''}
-      ${d.songs ? `<div class="form-section"><h4>歌術</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.songs}</pre></div>` : ''}`;
+      ${singerAbilitiesHTML}
+      ${singerSongsHTML}
+      ${combatHTML}
+      ${d.ng_actions ? `<div class="form-section"><h4>NG行動</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.ng_actions}</pre></div>` : ''}
+      ${d.notes ? `<div class="form-section"><h4>メモ</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.notes}</pre></div>` : ''}`;
   },
 
   armorDetailHTML(d, item) {
+    const adv = d.adv || {};
+    const finalMelee      = (d.hero_melee||0)+(d.armor_melee||0);
+    const finalRanged     = (d.hero_ranged||0)+(d.armor_ranged||0);
+    const finalEvasion    = (d.hero_evasion||0)+(d.armor_evasion||0);
+    const finalResistance = (d.hero_resistance||0)+(d.armor_resistance||0);
+    const finalRecon      = (d.hero_recon||0)+(d.armor_recon||0);
+
+    const advSection = (() => {
+      // 上級ルールデータが何もない場合は表示しない
+      const hasAdv = adv.move_normal || adv.move_type || adv.max_load
+        || (adv.weapon_types||[]).length || adv.hardpoints
+        || adv.price_g || adv.maintain_g
+        || (adv.hit_locations||[]).length;
+      if (!hasAdv) return '';
+
+      const hitLocTable = (adv.hit_locations||[]).length ? `
+        <div style="overflow-x:auto;margin-top:.5rem">
+          <table style="width:100%;border-collapse:collapse;font-size:.8rem;min-width:480px">
+            <thead><tr>
+              ${['D%範囲','部位','防御値','HP','0になった時の効果'].map(h=>`<th style="padding:.25rem .4rem;border:1px solid var(--border);color:var(--text-dim);background:var(--bg)">${h}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${adv.hit_locations.map(loc=>`<tr>
+                <td style="padding:.25rem .4rem;border:1px solid var(--border);white-space:nowrap">${loc.range||''}</td>
+                <td style="padding:.25rem .4rem;border:1px solid var(--border)">${loc.part||''}</td>
+                <td style="padding:.25rem .4rem;border:1px solid var(--border);text-align:center">${loc.defense||0}</td>
+                <td style="padding:.25rem .4rem;border:1px solid var(--border);text-align:center">${loc.hp||''}</td>
+                <td style="padding:.25rem .4rem;border:1px solid var(--border)">${loc.effect||''}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>` : '<p style="color:var(--text-dim);font-size:.82rem">命中部位表なし</p>';
+
+      return `<div class="form-section" style="border-color:var(--accent2)">
+        <h4 style="color:var(--accent2)">★ 上級ルール</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.3rem;font-size:.85rem;margin-bottom:.75rem">
+          ${[
+            ['移動速度',`通常:${adv.move_normal||'-'} / 戦闘:${adv.move_combat||'-'}`],
+            ['移動属性', adv.move_type||'-'],
+            ['最大荷重', adv.max_load!=null ? `${adv.max_load}（使用:${adv.used_load||0} 残:${(adv.max_load||0)-(adv.used_load||0)}）` : '-'],
+            ['武装タイプ', (adv.weapon_types||[]).join('・')||'-'],
+            ['ハードポイント', adv.hardpoints||'-'],
+            ['価格', [adv.price_g, adv.price_fp].filter(Boolean).join(' / ')||'-'],
+            ['維持費', [adv.maintain_g, adv.maintain_fp].filter(Boolean).join(' / ')||'-'],
+          ].map(([k,v])=>`<div style="background:var(--surface);padding:.4rem;border-radius:4px">
+            <span style="color:var(--text-dim);font-size:.72rem;display:block">${k}</span>
+            <strong style="font-size:.82rem">${v}</strong>
+          </div>`).join('')}
+        </div>
+        <strong style="font-size:.85rem">命中部位表</strong>
+        ${hitLocTable}
+      </div>`;
+    })();
+
     return `
       <div class="form-section"><h4>基本情報</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.3rem;font-size:.85rem">
           ${[['名称',d.name],['型式',d.model||'-'],['TL',d.tl||0],['工房',d.workshop||'-'],['防御値',d.defense||0]].map(([k,v])=>`<div style="background:var(--surface);padding:.4rem;border-radius:4px"><span style="color:var(--text-dim);font-size:.75rem;display:block">${k}</span><strong>${v}</strong></div>`).join('')}
         </div>
       </div>
-      <div class="form-section"><h4>奏甲HP</h4>
-        <div class="hp-row">
-          <div class="hp-block"><span>小破HP</span><strong>${d.hp?.small||0}</strong></div>
-          <div class="hp-block"><span>中破HP</span><strong>${d.hp?.medium||0}</strong></div>
-          <div class="hp-block"><span>大破HP</span><strong>${d.hp?.large||0}</strong></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div class="form-section"><h4>奏甲HP</h4>
+          <div class="hp-row">
+            <div class="hp-block"><span>小破HP</span><strong>${d.hp?.small||0}</strong></div>
+            <div class="hp-block"><span>中破HP</span><strong>${d.hp?.medium||0}</strong></div>
+            <div class="hp-block"><span>大破HP</span><strong>${d.hp?.large||0}</strong></div>
+          </div>
         </div>
-      </div>
-      <div class="form-section"><h4>戦闘修正</h4>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.3rem;font-size:.85rem">
-          ${[['白兵',(d.hero_melee||0)+(d.armor_melee||0)],['射撃',(d.hero_ranged||0)+(d.armor_ranged||0)],['回避',(d.hero_evasion||0)+(d.armor_evasion||0)],['抵抗',(d.hero_resistance||0)+(d.armor_resistance||0)],['偵察',(d.hero_recon||0)+(d.armor_recon||0)],['ダメージ修正',d.armor_damage_mod||0]].map(([k,v])=>`<div style="background:var(--surface);padding:.4rem;border-radius:4px"><span style="color:var(--text-dim);font-size:.75rem;display:block">${k}</span><strong>${v>=0?'+':''}${v}</strong></div>`).join('')}
+        <div class="form-section"><h4>戦闘修正（最終値）</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem;font-size:.85rem">
+            ${[['白兵',finalMelee],['射撃',finalRanged],['回避',finalEvasion],['抵抗',finalResistance],['偵察',finalRecon],['ダメージ修正',d.armor_damage_mod||0]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem .4rem;background:var(--surface);border-radius:4px"><span style="color:var(--text-dim)">${k}</span><strong>${v>=0?'+':''}${v}</strong></div>`).join('')}
+          </div>
         </div>
       </div>
       ${d.weapons?.length ? `<div class="form-section"><h4>搭載武器</h4>
         <div style="overflow-x:auto"><table style="width:100%;font-size:.8rem;border-collapse:collapse;min-width:500px">
-          <thead><tr>${['武器名','最終命中','ダメージ','射程','回数'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
-          <tbody>${d.weapons.map(w=>`<tr>${[w.name,w.finalHit||'-',w.damage||'-',w.range||'-',w.count||'1'].map(v=>`<td style="padding:.3rem;border-bottom:1px solid var(--border)">${v}</td>`).join('')}</tr>`).join('')}</tbody>
+          <thead><tr>${['武器名','最終命中','ダメージ','射程','回数','条件','重さ'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
+          <tbody>${d.weapons.map(w=>`<tr>${[w.name,w.finalHit||'-',w.damage||'-',w.range||'-',w.count||'1',w.condition||'-',w.weight||0].map(v=>`<td style="padding:.3rem;border-bottom:1px solid var(--border)">${v}</td>`).join('')}</tr>`).join('')}</tbody>
         </table></div></div>` : ''}
-      ${d.special_rules ? `<div class="form-section"><h4>特殊ルール</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.special_rules}</pre></div>` : ''}`;
+      ${d.special_rules ? `<div class="form-section"><h4>特殊ルール</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.special_rules}</pre></div>` : ''}
+      ${advSection}`;
   },
 
   // ===== 公開/非公開切り替え =====
@@ -427,7 +676,11 @@ const App = {
     const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}/${id}`;
     try {
       await API.put(endpoint, { is_public: !isPublic });
-      this.renderMypage();
+      if (this.currentPage === 'detail') {
+        await this.gotoDetail(type, id);
+      } else {
+        this.goto('mypage');
+      }
     } catch(e) { alert('切り替えに失敗しました: ' + e.message); }
   },
 
@@ -437,7 +690,7 @@ const App = {
     const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}/${id}`;
     try {
       await API.delete(endpoint);
-      this.renderMypage();
+      this.goto('mypage');
     } catch(e) { alert('削除に失敗しました: ' + e.message); }
   },
 
@@ -474,6 +727,18 @@ const App = {
       };
     } else if (type === 'singer') {
       const commands = buildSingerCcfoliaCommands(d);
+      // 歌姫能力メモ：新形式優先、旧形式フォールバック
+      const abilitiesMemo = (d.singer_abilities && d.singer_abilities.length)
+        ? d.singer_abilities.map(a => `${a.no}.${a.name}${a.memo ? '（'+a.memo+'）' : ''}`).join('\n')
+        : (d.abilities_memo || '');
+      // 歌術メモ：新形式優先、旧形式フォールバック
+      const songsMemo = (d.singer_songs && d.singer_songs.length)
+        ? d.singer_songs.map(s => `R${s.rank} ${s.name}${s.memo ? '（'+s.memo+'）' : ''}`).join('\n')
+        : (d.songs || '');
+      // 武器情報
+      const weaponsMemo = (d.weapons && d.weapons.length)
+        ? d.weapons.map(w => `${w.name}：命中${w.hit} ${w.damage} 射程${w.range}`).join('\n')
+        : '';
       ccfolia = {
         kind: 'character',
         data: {
@@ -481,16 +746,19 @@ const App = {
           memo: [
             `【歌姫】Lv${d.level||1} 絆Lv${d.bond_level||1} 階位${d.rank||1}`,
             `通常HP:${d.hp?.normal||0} / 負傷HP:${d.hp?.injured||0}`,
-            d.abilities_memo ? `\n[歌姫能力]\n${d.abilities_memo}` : '',
-            d.songs ? `\n[歌術]\n${d.songs}` : '',
-            d.ng_actions ? `\n[NG行動]\n${d.ng_actions}` : '',
+            `防御値:${d.modifiers?.defense||0}`,
+            abilitiesMemo ? `\n[歌姫能力]\n${abilitiesMemo}` : '',
+            songsMemo     ? `\n[歌術]\n${songsMemo}`         : '',
+            weaponsMemo   ? `\n[武器]\n${weaponsMemo}`       : '',
+            d.equipment   ? `\n[装備]\n${d.equipment}`       : '',
+            d.ng_actions  ? `\n[NG行動]\n${d.ng_actions}`    : '',
           ].filter(Boolean).join('\n'),
           commands: commands.map(c => `${c.label}\n${c.value}`).join('\n\n'),
           status: [
-            { label: '通常HP', value: d.hp?.normal||0, max: d.hp?.normal||0 },
+            { label: '通常HP',   value: d.hp?.normal||0,           max: d.hp?.normal||0 },
             { label: '肉体ゲージ', value: d.gauges?.肉体?.boxes||3, max: d.gauges?.肉体?.boxes||3 },
             { label: '気力ゲージ', value: d.gauges?.気力?.boxes||3, max: d.gauges?.気力?.boxes||3 },
-            { label: '絆ゲージ', value: d.gauges?.絆?.boxes||3, max: d.gauges?.絆?.boxes||3 },
+            { label: '絆ゲージ',  value: d.gauges?.絆?.boxes||3,   max: d.gauges?.絆?.boxes||3 },
           ],
           params: ABILITY_NAMES.map(n => ({ label: n, value: String(d.abilities?.[n]||10) })),
         }
@@ -526,45 +794,64 @@ const App = {
     }
 
     const json = JSON.stringify(ccfolia, null, 2);
-    const label = type==='hero'?'英雄':type==='singer'?'歌姫':'奏甲';
-    ModalManager.open(`ccfolia JSON: ${d.name}`, `
+    // ccfoliaページへ遷移して表示
+    App._ccfoliaJson  = json;
+    App._ccfoliaLabel = `${type==='hero'?'英雄':type==='singer'?'歌姫':'奏甲'}: ${d.name}`;
+    App.currentPage = 'ccfolia';
+    App.render();
+    App._renderCcfoliaPage(json, type, id);
+    window.scrollTo(0, 0);
+  },
+
+  // ===== ccfoliaページ遷移版 =====
+  async gotoCcfolia(type, id) { return this.showCcfoliaJSON(type, id); },
+
+  _renderCcfoliaPage(json, type, id) {
+    const el = document.getElementById('ccfolia-content');
+    if (!el) return;
+    const backPage = this._prevPage || (this._detailItem ? 'detail' : 'mypage');
+    el.innerHTML = `
+      <div class="page-header">
+        <button class="btn btn-secondary btn-sm" onclick="App._backFromCcfolia()">← 戻る</button>
+        <h2>ccfolia JSON: ${this._ccfoliaLabel||''}</h2>
+        <div class="page-header-actions">
+          <button class="btn btn-primary btn-sm" onclick="navigator.clipboard.writeText(App._ccfoliaJson).then(()=>alert('コピーしました'))">📋 コピー</button>
+        </div>
+      </div>
       <p style="font-size:.85rem;color:var(--text-dim);margin-bottom:.75rem">以下のJSONをコピーして、ccfoliaのキャラクター駒作成画面でJSONとしてインポートしてください。</p>
-      <div class="json-output" id="ccfolia-json">${json}</div>`,
-      [
-        { label: 'コピー', cls: 'btn-primary', action: () => { navigator.clipboard.writeText(json).then(() => alert('コピーしました')); } },
-        { label: '閉じる', cls: 'btn-secondary', action: () => ModalManager.close() },
-      ]);
+      <div class="json-output">${json}</div>`;
+  },
+
+  _backFromCcfolia() {
+    if (this._detailItem && this._detailType) {
+      this.gotoDetail(this._detailType, this._detailItem.id);
+    } else {
+      this.goto(this._prevPage || 'mypage');
+    }
   },
 
   // ===== 共有URL =====
   showShareURL(type, id, token) {
     const url = `${location.origin}/share/${type}/${token}`;
-    ModalManager.open('共有URL', `
-      <p style="font-size:.85rem;color:var(--text-dim);margin-bottom:.75rem">このURLを共有することで、誰でもこのキャラクターを閲覧できます（公開設定に関わらず）。</p>
+    const el = document.getElementById('detail-content');
+    // 詳細ページ内にインライン表示
+    const existing = document.getElementById('share-url-popup');
+    if (existing) existing.remove();
+    const div = document.createElement('div');
+    div.id = 'share-url-popup';
+    div.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:1rem 1.25rem;z-index:100;box-shadow:var(--shadow);width:min(90vw,500px)';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <strong style="font-size:.9rem">共有URL</strong>
+        <button onclick="document.getElementById('share-url-popup').remove()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1.2rem">✕</button>
+      </div>
+      <p style="font-size:.8rem;color:var(--text-dim);margin-bottom:.5rem">このURLを知っている人なら誰でも閲覧できます。</p>
       <div class="share-url-box">
-        <input id="share-url-input" value="${url}" readonly>
+        <input value="${url}" readonly style="font-size:.8rem">
         <button class="btn btn-primary btn-sm" onclick="navigator.clipboard.writeText('${url}').then(()=>alert('コピーしました'))">コピー</button>
-      </div>`,
-      [{ label: '閉じる', cls: 'btn-secondary', action: () => ModalManager.close() }]);
+      </div>`;
+    document.body.appendChild(div);
   },
-};
-
-// ===== モーダルマネージャー =====
-const ModalManager = {
-  open(title, body, buttons = []) {
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-body').innerHTML = body;
-    document.getElementById('modal-footer').innerHTML = buttons.map((b, i) =>
-      `<button class="btn ${b.cls}" id="modal-btn-${i}">${b.label}</button>`
-    ).join('');
-    buttons.forEach((b, i) => {
-      document.getElementById(`modal-btn-${i}`)?.addEventListener('click', b.action);
-    });
-    document.getElementById('modal-overlay').classList.add('open');
-  },
-  close() {
-    document.getElementById('modal-overlay').classList.remove('open');
-  }
 };
 
 // ===== 共有URL処理 =====
@@ -576,26 +863,17 @@ async function handleShareURL() {
   const item = await API.get(endpoint).catch(() => null);
   if (!item) { alert('キャラクターが見つかりません'); return false; }
 
-  const label = type==='hero'?'英雄':type==='singer'?'歌姫':'奏甲';
+  App._prevPage = 'public';
   App.currentPage = 'public';
   App.render();
-
-  const html = type==='hero' ? App.heroDetailHTML(item.data, item)
-              : type==='singer' ? App.singerDetailHTML(item.data, item)
-              : App.armorDetailHTML(item.data, item);
-  ModalManager.open(`${label}: ${item.data.name} (by ${item.username})`, html,
-    [{ label: '閉じる', cls: 'btn-secondary', action: () => ModalManager.close() }]);
+  await App.renderPublic();
+  // 少し待ってから詳細ページへ
+  setTimeout(() => App.gotoDetail(type, item.id), 100);
   return true;
 }
 
 // ===== 初期化 =====
 document.addEventListener('DOMContentLoaded', async () => {
-  // モーダルの外クリックで閉じる
-  document.getElementById('modal-overlay')?.addEventListener('click', e => {
-    if (e.target === e.currentTarget) ModalManager.close();
-  });
-
-  // 共有URLの処理
   const handled = await handleShareURL();
   if (!handled) {
     App.currentPage = Auth.isLoggedIn ? 'mypage' : 'auth';

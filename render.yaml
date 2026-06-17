@@ -9,7 +9,7 @@ services:
         generateValue: true
       - key: NODE_ENV
         value: production
-    disk:
-      name: data
-      mountPath: /app/data
-      sizeGB: 1
+      - key: TURSO_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false

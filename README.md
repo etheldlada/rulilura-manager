@@ -11,37 +11,82 @@
 
 ---
 
-## ローカルでの起動
+## ローカルでの起動（Tursoなし）
 
 ### 前提
 - Node.js 18以上
 
 ### 手順
 ```bash
-# 依存パッケージのインストール
 npm install
-
-# 起動
 npm start
-# または開発時（ファイル変更を自動反映）
-npm run dev
+# → http://localhost:3000
 ```
 
-ブラウザで `http://localhost:3000` を開く。
+環境変数 `TURSO_URL` を設定しない場合、`./data/rulilura.db` にローカルSQLiteファイルを自動作成します。
 
 ---
 
-## Renderへのデプロイ
+## Turso セットアップ
 
-1. GitHubリポジトリを作成してこのコードをpush
-2. [render.com](https://render.com) でアカウント作成
-3. "New Web Service" → GitHubリポジトリを選択
-4. `render.yaml` が自動的に設定を読み込む
-5. デプロイ完了後、発行されたURLにアクセス
+### 1. Turso CLIをインストール
+```bash
+# macOS / Linux
+curl -sSfL https://get.tur.so/install.sh | bash
 
-> **注意**: Renderの無料プランではディスク永続化が有料機能です。
-> 無料プランで試す場合はSQLiteのデータが再デプロイ時にリセットされます。
-> 永続化が必要な場合はRenderの有料プラン（Disk付き）か、PlanetScaleなどの外部DBに切り替えてください。
+# Windows (scoop)
+scoop bucket add turso https://github.com/tursodatabase/scoop-bucket.git
+scoop install turso
+```
+
+### 2. ログイン & DBを作成
+```bash
+turso auth login
+
+# DBを作成（名前は任意）
+turso db create rulilura-db
+
+# 接続URLを確認
+turso db show rulilura-db --url
+# → libsql://rulilura-db-xxxx.turso.io
+
+# 認証トークンを発行
+turso db tokens create rulilura-db
+# → eyJhbGciOi...（長い文字列）
+```
+
+### 3. ローカルでTursoを使って起動
+```bash
+TURSO_URL=libsql://rulilura-db-xxxx.turso.io \
+TURSO_AUTH_TOKEN=eyJhbGciOi... \
+npm start
+```
+
+---
+
+## Renderへのデプロイ（Turso使用）
+
+### 1. GitHubにpush済みであること
+
+### 2. Renderでサービス作成
+1. [render.com](https://render.com) → New → Web Service
+2. GitHubリポジトリを選択
+3. 以下を設定：
+   - Build Command: `npm install`
+   - Start Command: `npm start`
+   - Instance Type: **Free**
+
+### 3. 環境変数を設定
+| Key | Value |
+|-----|-------|
+| `JWT_SECRET` | ランダムな文字列（例: `openssl rand -hex 32` の出力） |
+| `NODE_ENV` | `production` |
+| `TURSO_URL` | `libsql://rulilura-db-xxxx.turso.io` |
+| `TURSO_AUTH_TOKEN` | Tursoで発行したトークン |
+
+### 4. Deploy
+「Create Web Service」→ 2〜3分でデプロイ完了。  
+Diskは不要です（データはTursoに保存されます）。
 
 ---
 
@@ -49,14 +94,8 @@ npm run dev
 
 1. キャラクターカードの「ccfolia」ボタンをクリック
 2. 表示されたJSONをコピー
-3. ccfoliaでルームを開き、コマを右クリック →「JSONからインポート」を選択
+3. ccfoliaでルームを開き、コマを右クリック →「JSONからインポート」
 4. コピーしたJSONを貼り付け
-
-生成されるコマンドの例：
-- `剣技 → 1D100<=70 [剣技 スキル20]`
-- `攻撃:ロングソード → 1D100<=65 [ロングソード命中]`
-- `筋力チェック → 1D100<=52 [筋力チェック 成功値:52]`
-- `肉体消耗チェック → 2D10<=9 [肉体消耗チェック 消耗値:9]`
 
 ---
 
@@ -66,7 +105,7 @@ npm run dev
 rulilura/
 ├── src/
 │   ├── server.js           # Expressサーバー
-│   ├── db/database.js      # SQLite初期化
+│   ├── db/database.js      # Turso/SQLite接続・初期化
 │   ├── middleware/auth.js  # JWT認証
 │   └── routes/
 │       ├── auth.js         # ログイン・登録API
@@ -81,25 +120,16 @@ rulilura/
 │       ├── singer-form.js  # 歌姫フォーム
 │       ├── armor-form.js   # 奏甲フォーム
 │       └── app.js          # メインアプリ
-├── data/                   # SQLiteファイル（自動生成）
 ├── render.yaml
 ├── package.json
 └── README.md
 ```
 
----
+## 環境変数一覧
 
-## API エンドポイント
-
-| メソッド | パス | 説明 |
+| 変数名 | 必須 | 説明 |
 |--------|------|------|
-| POST | /api/auth/register | ユーザー登録 |
-| POST | /api/auth/login | ログイン |
-| GET | /api/heroes | 自分の英雄一覧 |
-| GET | /api/heroes/public | 公開英雄一覧 |
-| GET | /api/heroes/share/:token | 共有トークンで取得 |
-| GET | /api/heroes/:id | 単件取得 |
-| POST | /api/heroes | 英雄作成 |
-| PUT | /api/heroes/:id | 英雄更新 |
-| DELETE | /api/heroes/:id | 英雄削除 |
-| （singers/armorsも同様） | | |
+| `TURSO_URL` | 本番のみ | TursoのDB URL（省略時はローカルSQLite） |
+| `TURSO_AUTH_TOKEN` | 本番のみ | Tursoの認証トークン |
+| `JWT_SECRET` | 推奨 | JWTの署名キー（省略時はデフォルト値） |
+| `PORT` | 任意 | サーバーポート（デフォルト3000） |
