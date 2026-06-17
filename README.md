@@ -1,7 +1,8 @@
 # RuLiLuRa Manager
 **幻奏戦記 Ru/Li/Lu/Ra ノイシュタルト** キャラクター管理Webシステム
 
-<span style="font-size: 28px;font-weight:bold;color:red">暫定版　バイブコーディングなので正確性はない</span>
+[!IMPORTANT]
+<span style="color:red">**暫定版　バイブコーディングなので正確性はない**</span>
 
 ## 機能
 - 英雄・歌姫・奏甲シートの作成・編集・閲覧
