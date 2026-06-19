@@ -437,7 +437,13 @@ const App = {
           <div class="form-section">
             <h4>戦闘修正</h4>
             <div style="font-size:.85rem">
-              ${[['白兵',mods.melee||0],['射撃',mods.ranged||0],['回避',mods.evasion||0],['抵抗',mods.resistance||0],['防御値',mods.defense||0],['ダメージ修正',mods.damage||0]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">${k}</span><strong>${v>=0?'+':''}${v}</strong></div>`).join('')}
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">白兵</span><strong>${mods.melee>=0?'+':''}${mods.melee||0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">射撃</span><strong>${mods.ranged>=0?'+':''}${mods.ranged||0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">回避の元値</span><strong>${(mods.evasionRaw??mods.evasion)>=0?'+':''}${mods.evasionRaw??mods.evasion??0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">回避修正</span><strong>${mods.evasion>=0?'+':''}${mods.evasion||0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">抵抗</span><strong>${mods.resistance>=0?'+':''}${mods.resistance||0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">防御値</span><strong>${mods.defense>=0?'+':''}${mods.defense||0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">ダメージ修正</span><strong>${mods.damage>=0?'+':''}${mods.damage||0}</strong></div>
             </div>
           </div>
         </div>
@@ -447,12 +453,18 @@ const App = {
           <thead><tr>${['武器名','命中値','ダメージ','射程'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
           <tbody>${d.weapons.map(w=>`<tr>${[w.name,w.hit,w.damage,w.range].map(v=>`<td style="padding:.3rem;border-bottom:1px solid var(--border)">${v||'-'}</td>`).join('')}</tr>`).join('')}</tbody>
         </table></div></div>` : ''}
+      ${d.armors?.length ? `<div class="form-section"><h4>防具</h4>
+        <div style="overflow-x:auto"><table style="width:100%;font-size:.82rem;border-collapse:collapse;min-width:300px">
+          <thead><tr>${['防具名','防御値','回避ペナルティ'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
+          <tbody>${d.armors.map(a=>`<tr><td style="padding:.3rem;border-bottom:1px solid var(--border)">${a.name||'-'}</td><td style="padding:.3rem;border-bottom:1px solid var(--border)">${a.defense||0}</td><td style="padding:.3rem;border-bottom:1px solid var(--border)">${a.evasionPenalty||0}</td></tr>`).join('')}</tbody>
+          <tfoot><tr style="font-weight:bold;background:var(--surface)"><td style="padding:.3rem">合計</td><td style="padding:.3rem">${d.armors.reduce((s,a)=>s+(a.defense||0),0)}</td><td style="padding:.3rem">${d.armors.reduce((s,a)=>s+(a.evasionPenalty||0),0)}</td></tr></tfoot>
+        </table></div></div>` : ''}
       ${heroAbilitiesHTML}
       ${d.skills && Object.keys(d.skills).length ? `<div class="form-section"><h4>スキル</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.3rem;font-size:.82rem">
           ${Object.entries(d.skills).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem .5rem;background:var(--surface);border-radius:4px"><span>${k}</span><strong>${v} <span style="color:var(--text-dim)">(${50+v})</span></strong></div>`).join('')}
         </div></div>` : ''}
-      ${d.equipment ? `<div class="form-section"><h4>装備品</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.equipment}</pre></div>` : ''}
+      ${d.equipment ? `<div class="form-section"><h4>その他の所持品</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.equipment}</pre></div>` : ''}
       ${d.notes ? `<div class="form-section"><h4>メモ</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.notes}</pre></div>` : ''}`;
   },
 
@@ -526,19 +538,26 @@ const App = {
       return '';
     })();
 
-    // 戦闘系歌姫：武器・装備
+    // 戦闘系歌姫：武器・防具
     const combatHTML = (() => {
       const hasWeapons  = d.weapons && d.weapons.length > 0;
+      const hasArmors   = d.armors  && d.armors.length  > 0;
       const hasEquip    = !!d.equipment;
-      if (!hasWeapons && !hasEquip) return '';
+      if (!hasWeapons && !hasArmors && !hasEquip) return '';
       return `<div class="form-section" style="border-color:var(--singer)">
-        <h4 style="color:var(--singer)">⚔ 戦闘系歌姫：武器・装備</h4>
+        <h4 style="color:var(--singer)">⚔ 戦闘系歌姫：武器・防具</h4>
         ${hasWeapons ? `<div style="overflow-x:auto;margin-bottom:.5rem">
           <table style="width:100%;font-size:.82rem;border-collapse:collapse;min-width:380px">
             <thead><tr>${['武器名','命中値','スキル','ダメージ','射程'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
             <tbody>${d.weapons.map(w=>`<tr>${[w.name,w.hit,w.skill,w.damage,w.range].map(v=>`<td style="padding:.3rem;border-bottom:1px solid var(--border)">${v||'-'}</td>`).join('')}</tr>`).join('')}</tbody>
           </table></div>` : ''}
-        ${hasEquip ? `<div style="font-size:.83rem"><strong style="color:var(--text-dim)">防具・装備：</strong>${d.equipment}</div>` : ''}
+        ${hasArmors ? `<div style="overflow-x:auto;margin-bottom:.5rem">
+          <table style="width:100%;font-size:.82rem;border-collapse:collapse;min-width:300px">
+            <thead><tr>${['防具名','防御値','回避ペナルティ'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
+            <tbody>${d.armors.map(a=>`<tr><td style="padding:.3rem;border-bottom:1px solid var(--border)">${a.name||'-'}</td><td style="padding:.3rem;border-bottom:1px solid var(--border)">${a.defense||0}</td><td style="padding:.3rem;border-bottom:1px solid var(--border)">${a.evasionPenalty||0}</td></tr>`).join('')}</tbody>
+            <tfoot><tr style="font-weight:bold;background:var(--surface)"><td style="padding:.3rem">合計</td><td style="padding:.3rem">${d.armors.reduce((s,a)=>s+(a.defense||0),0)}</td><td style="padding:.3rem">${d.armors.reduce((s,a)=>s+(a.evasionPenalty||0),0)}</td></tr></tfoot>
+          </table></div>` : ''}
+        ${hasEquip ? `<div style="font-size:.83rem"><strong style="color:var(--text-dim)">その他装備：</strong>${d.equipment}</div>` : ''}
       </div>`;
     })();
 
@@ -557,7 +576,12 @@ const App = {
           </div>
           <div class="form-section"><h4>戦闘修正</h4>
             <div style="font-size:.85rem">
-              ${[['白兵',mods.melee||0],['射撃',mods.ranged||0],['回避',mods.evasion||0],['抵抗',mods.resistance||0],['防御値',mods.defense||0]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">${k}</span><strong>${v>=0?'+':''}${v}</strong></div>`).join('')}
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">白兵</span><strong>${mods.melee>=0?'+':''}${mods.melee||0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">射撃</span><strong>${mods.ranged>=0?'+':''}${mods.ranged||0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">回避の元値</span><strong>${(mods.evasionRaw??mods.evasion)>=0?'+':''}${mods.evasionRaw??mods.evasion??0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">回避修正</span><strong>${mods.evasion>=0?'+':''}${mods.evasion||0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">抵抗</span><strong>${mods.resistance>=0?'+':''}${mods.resistance||0}</strong></div>
+              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">防御値</span><strong>${mods.defense>=0?'+':''}${mods.defense||0}</strong></div>
             </div>
           </div>
         </div>
@@ -704,6 +728,12 @@ const App = {
     let ccfolia;
     if (type === 'hero') {
       const commands = buildCcfoliaCommands(d);
+      const armorsMemo = (d.armors && d.armors.length)
+        ? d.armors.map(a => `${a.name}：防御値${a.defense||0}${a.evasionPenalty ? ` 回避ペナルティ-${a.evasionPenalty}` : ''}`).join('\n')
+        : '';
+      const abilitiesMemo = (d.hero_abilities && d.hero_abilities.length)
+        ? d.hero_abilities.map(a => `${a.no}.${a.name}${a.memo ? '（'+a.memo+'）' : ''}`).join('\n')
+        : (d.abilities_memo || '');
       ccfolia = {
         kind: 'character',
         data: {
@@ -712,8 +742,10 @@ const App = {
             `【英雄】Lv${d.level||1} ${d.gender||''} ${d.nationality||''} ${d.job||''}`,
             `通常HP:${d.hp?.normal||0} / 負傷HP:${d.hp?.injured||0} / MP:${d.hp?.mp||0}`,
             `防御値:${d.modifiers?.defense||0}`,
-            d.abilities_memo ? `\n[英雄能力]\n${d.abilities_memo}` : '',
-            d.notes ? `\n[メモ]\n${d.notes}` : '',
+            armorsMemo    ? `\n[防具]\n${armorsMemo}`       : '',
+            abilitiesMemo ? `\n[英雄能力]\n${abilitiesMemo}` : '',
+            d.equipment   ? `\n[所持品]\n${d.equipment}`     : '',
+            d.notes       ? `\n[メモ]\n${d.notes}`           : '',
           ].filter(Boolean).join('\n'),
           initiative: (d.abilities?.敏捷||10) - 10,
           commands: commands.map(c => `${c.label}\n${c.value}`).join('\n\n'),
@@ -739,6 +771,10 @@ const App = {
       const weaponsMemo = (d.weapons && d.weapons.length)
         ? d.weapons.map(w => `${w.name}：命中${w.hit} ${w.damage} 射程${w.range}`).join('\n')
         : '';
+      // 防具情報
+      const armorsMemo = (d.armors && d.armors.length)
+        ? d.armors.map(a => `${a.name}：防御値${a.defense||0}${a.evasionPenalty ? ` 回避ペナルティ-${a.evasionPenalty}` : ''}`).join('\n')
+        : '';
       ccfolia = {
         kind: 'character',
         data: {
@@ -750,7 +786,8 @@ const App = {
             abilitiesMemo ? `\n[歌姫能力]\n${abilitiesMemo}` : '',
             songsMemo     ? `\n[歌術]\n${songsMemo}`         : '',
             weaponsMemo   ? `\n[武器]\n${weaponsMemo}`       : '',
-            d.equipment   ? `\n[装備]\n${d.equipment}`       : '',
+            armorsMemo    ? `\n[防具]\n${armorsMemo}`        : '',
+            d.equipment   ? `\n[その他装備]\n${d.equipment}` : '',
             d.ng_actions  ? `\n[NG行動]\n${d.ng_actions}`    : '',
           ].filter(Boolean).join('\n'),
           commands: commands.map(c => `${c.label}\n${c.value}`).join('\n\n'),

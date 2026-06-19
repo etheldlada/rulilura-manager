@@ -65,10 +65,11 @@ const HeroForm = {
       abilities: { 筋力: 10, 器用さ: 10, 敏捷: 10, 生命力: 10, 知力: 10, 精神力: 10 },
       skills: {},
       hp: { normal: 0, injured: 0, mp: 0 },
-      modifiers: { melee: 0, ranged: 0, evasion: 0, resistance: 0, defense: 0, damage: 0 },
+      modifiers: { melee: 0, ranged: 0, evasion: 0, evasionRaw: 0, resistance: 0, defense: 0, damage: 0 },
       weapons: [],
+      armors: [], // [{name, defense, evasionPenalty}] 防具・盾の個別管理
       hero_abilities: [], // [{no, name, memo}] 個別管理
-      equipment: '',
+      equipment: '', // 旧データ互換用（武器・防具以外の所持品はここに残す運用も可）
       notes: '',
       // 旧データ互換
       abilities_memo: '',
@@ -132,6 +133,14 @@ const HeroForm = {
         <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeWeapon(${i})">×</button></td>
       </tr>`).join('');
 
+    const armorRows = (d.armors || []).map((a, i) => `
+      <tr data-armi="${i}">
+        <td><input name="armn" value="${a.name || ''}" placeholder="皮ヨロイ・小盾など" class="armor-calc"></td>
+        <td><input name="armd" value="${a.defense || ''}" placeholder="3" style="width:60px" type="number" class="armor-calc"></td>
+        <td><input name="armp" value="${a.evasionPenalty || ''}" placeholder="0" style="width:60px" type="number" class="armor-calc"></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeArmor(${i})">×</button></td>
+      </tr>`).join('');
+
     // 英雄能力行（旧データ互換：abilities_memoのみある場合は空行1つを用意）
     const heroAbilities = (d.hero_abilities && d.hero_abilities.length > 0)
       ? d.hero_abilities
@@ -184,11 +193,13 @@ const HeroForm = {
           <div class="form-row">
             <div class="form-group"><label>白兵修正</label><input type="number" name="mod_melee" value="${d.modifiers.melee}" id="mod-melee"></div>
             <div class="form-group"><label>射撃修正</label><input type="number" name="mod_ranged" value="${d.modifiers.ranged}" id="mod-ranged"></div>
-            <div class="form-group"><label>回避修正</label><input type="number" name="mod_evasion" value="${d.modifiers.evasion}"></div>
+            <div class="form-group"><label>回避の元値（自動計算:敏捷+回避スキル+防具修正）</label><input type="number" name="mod_evasion_raw" value="${d.modifiers.evasionRaw ?? d.modifiers.evasion}" id="mod-evasion-raw"></div>
+            <div class="form-group"><label>回避修正（10単位に変換・自動計算）</label><input type="number" name="mod_evasion" value="${d.modifiers.evasion}" id="mod-evasion" readonly></div>
             <div class="form-group"><label>抵抗修正</label><input type="number" name="mod_resistance" value="${d.modifiers.resistance}" id="mod-resistance"></div>
-            <div class="form-group"><label>防御値</label><input type="number" name="mod_defense" value="${d.modifiers.defense}"></div>
+            <div class="form-group"><label>防御値（自動計算:防具合計）</label><input type="number" name="mod_defense" value="${d.modifiers.defense}" id="mod-defense"></div>
             <div class="form-group"><label>ダメージ修正</label><input type="number" name="mod_damage" value="${d.modifiers.damage}"></div>
           </div>
+          <small style="color:var(--text-dim);display:block;margin-top:.4rem">※回避修正は元値の「1の位」を切り捨て10単位にした値です（例: 元値-1〜-10は-10、-11〜-20は-20、元値1〜9は0）。</small>
         </div>
 
         <div class="form-section">
@@ -212,6 +223,19 @@ const HeroForm = {
         </div>
 
         <div class="form-section">
+          <h4>防具</h4>
+          <div style="overflow-x:auto">
+            <table class="weapon-table" style="min-width:340px">
+              <thead><tr><th>防具名</th><th>防御値</th><th>回避ペナルティ</th><th></th></tr></thead>
+              <tbody id="armor-tbody">${armorRows}</tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" style="margin-top:.5rem" onclick="HeroForm.addArmor()">＋ 防具を追加</button>
+          <div style="font-size:.8rem;color:var(--accent2);margin-top:.5rem">防御値合計: <strong id="armor-defense-total">0</strong> ／ 回避ペナルティ合計: <strong id="armor-penalty-total">0</strong></div>
+          <small style="color:var(--text-dim);display:block;margin-top:.2rem">防御値・回避修正は上の「戦闘修正」欄に自動反映されます（盾は防御値1枚分のみ加算するルールのため、複数装備時は手動調整してください）。</small>
+        </div>
+
+        <div class="form-section">
           <h4>英雄能力</h4>
           ${legacyMemo}
           <div style="overflow-x:auto">
@@ -231,8 +255,8 @@ const HeroForm = {
         </div>
 
         <div class="form-section">
-          <h4>装備品・メモ</h4>
-          <div class="form-group"><label>装備品</label><textarea name="equipment" rows="2" placeholder="所持装備・アイテム...">${d.equipment || ''}</textarea></div>
+          <h4>その他の所持品・メモ</h4>
+          <div class="form-group"><label>その他装備品（武器・防具以外）</label><textarea name="equipment" rows="2" placeholder="冒険者セット・歌術アイテムなど...">${d.equipment || ''}</textarea></div>
           <div class="form-group"><label>メモ</label><textarea name="notes" rows="3" placeholder="自由メモ...">${d.notes || ''}</textarea></div>
         </div>
       </form>`;
@@ -266,6 +290,17 @@ const HeroForm = {
       });
     }
 
+    const armors = [];
+    for (const row of f.querySelectorAll('#armor-tbody tr')) {
+      const name = row.querySelector('[name=armn]')?.value?.trim();
+      if (!name) continue;
+      armors.push({
+        name,
+        defense:        parseInt(row.querySelector('[name=armd]')?.value) || 0,
+        evasionPenalty: parseInt(row.querySelector('[name=armp]')?.value) || 0,
+      });
+    }
+
     const hero_abilities = [];
     for (const row of f.querySelectorAll('#hero-ability-tbody tr')) {
       const no   = parseInt(row.querySelector('[name=hab_no]')?.value) || 0;
@@ -282,10 +317,13 @@ const HeroForm = {
       hp: { normal: gi('hp_normal'), injured: gi('hp_injured'), mp: gi('hp_mp') },
       modifiers: {
         melee: gi('mod_melee'), ranged: gi('mod_ranged'),
-        evasion: gi('mod_evasion'), resistance: gi('mod_resistance'),
+        evasionRaw: gi('mod_evasion_raw'),
+        evasion: HeroForm.floorTo10(gi('mod_evasion_raw')),
+        resistance: gi('mod_resistance'),
         defense: gi('mod_defense'), damage: gi('mod_damage'),
       },
       weapons,
+      armors,
       hero_abilities,
       equipment: g('equipment'),
       notes:     g('notes'),
@@ -329,6 +367,78 @@ const HeroForm = {
     if (rows[i]) rows[i].remove();
   },
 
+  addArmor() {
+    const tbody = document.getElementById('armor-tbody');
+    if (!tbody) return;
+    const i = tbody.querySelectorAll('tr').length;
+    const tr = document.createElement('tr');
+    tr.dataset.armi = i;
+    tr.innerHTML = `
+      <td><input name="armn" placeholder="皮ヨロイ・小盾など" class="armor-calc"></td>
+      <td><input name="armd" placeholder="3" style="width:60px" type="number" class="armor-calc"></td>
+      <td><input name="armp" placeholder="0" style="width:60px" type="number" class="armor-calc"></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeArmor(${i})">×</button></td>`;
+    tbody.appendChild(tr);
+    this._attachArmorCalc(tr);
+    this._updateArmorTotals();
+  },
+
+  removeArmor(i) {
+    const rows = document.querySelectorAll('#armor-tbody tr');
+    if (rows[i]) { rows[i].remove(); this._updateArmorTotals(); }
+  },
+
+  // 防具行ごとの入力イベント付与
+  _attachArmorCalc(rowEl) {
+    const inputs = rowEl.querySelectorAll('.armor-calc');
+    inputs.forEach(el => el.addEventListener('input', () => this._updateArmorTotals()));
+  },
+
+  // 防具合計（防御値・回避ペナルティ）を計算し、戦闘修正欄へ反映
+  _updateArmorTotals() {
+    let defenseTotal = 0;
+    let penaltyTotal = 0;
+    document.querySelectorAll('#armor-tbody tr').forEach(row => {
+      const name = row.querySelector('[name=armn]')?.value?.trim();
+      if (!name) return;
+      defenseTotal += parseInt(row.querySelector('[name=armd]')?.value) || 0;
+      penaltyTotal += parseInt(row.querySelector('[name=armp]')?.value) || 0;
+    });
+
+    const defTotalEl = document.getElementById('armor-defense-total');
+    const penTotalEl = document.getElementById('armor-penalty-total');
+    if (defTotalEl) defTotalEl.textContent = defenseTotal;
+    if (penTotalEl) penTotalEl.textContent = penaltyTotal;
+
+    // 防御値・回避修正欄へ自動反映
+    const defenseInput = document.getElementById('mod-defense');
+    if (defenseInput) defenseInput.value = defenseTotal;
+    this._recalcEvasion();
+  },
+
+  // 10単位切り捨て変換（ルール仕様）
+  // 例: 1〜9→0, 10〜19→10, -1〜-10→-10, -11〜-20→-20
+  floorTo10(v) {
+    return Math.floor(v / 10) * 10;
+  },
+
+  // 回避の元値 = 敏捷修正 + 回避スキル値 + 防具回避ペナルティ合計（盾ボーナスは別途手動加算）
+  // 回避修正 = 元値の「1の位」を切り捨てて10単位にした値
+  _recalcEvasion() {
+    const agi = parseInt(document.querySelector('[name="ab_敏捷"]')?.value) || 10;
+    const agiMod = agi - 10;
+    const evasionSkill = parseInt(document.querySelector('[name="skill_回避"]')?.value) || 0;
+    const penaltyTotal = parseInt(document.getElementById('armor-penalty-total')?.textContent) || 0;
+
+    const raw = agiMod + evasionSkill - penaltyTotal;
+
+    const rawInput = document.getElementById('mod-evasion-raw');
+    if (rawInput) rawInput.value = raw;
+
+    const evasionInput = document.getElementById('mod-evasion');
+    if (evasionInput) evasionInput.value = this.floorTo10(raw);
+  },
+
   attachAutoCalc() {
     document.querySelectorAll('[name^="ab_"]').forEach(el => {
       el.addEventListener('input', () => {
@@ -354,6 +464,9 @@ const HeroForm = {
           const small = el2.nextElementSibling;
           if (small?.tagName === 'SMALL') small.textContent = `修正:${v-10>=0?'+':''}${v-10}`;
         });
+
+        // 敏捷変更時は回避修正も再計算
+        this._recalcEvasion();
       });
     });
 
@@ -370,8 +483,21 @@ const HeroForm = {
           lastTd.textContent = v > 0 ? (50 + v) : '-';
         }
       });
+      // 回避スキル変更時は回避修正も再計算
+      this._recalcEvasion();
     };
-    document.querySelectorAll('[name^="skill_"]').forEach(el => el.addEventListener('input', updateSkillPoints));
+    document.querySelectorAll('[name^="skill_"]').forEach(el => el.addEventListener('input', () => updateSkillPoints()));
     updateSkillPoints();
+
+    // 既存の防具行にイベント付与＋初回の合計計算
+    document.querySelectorAll('#armor-tbody tr').forEach(tr => this._attachArmorCalc(tr));
+    this._updateArmorTotals();
+
+    // 回避の元値を手動編集した場合も10単位変換を再計算
+    document.getElementById('mod-evasion-raw')?.addEventListener('input', (e) => {
+      const raw = parseInt(e.target.value) || 0;
+      const evasionInput = document.getElementById('mod-evasion');
+      if (evasionInput) evasionInput.value = this.floorTo10(raw);
+    });
   }
 };
