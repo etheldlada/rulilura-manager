@@ -433,6 +433,7 @@ const App = {
             <div class="hp-row">
               ${[['通常HP',d.hp?.normal||0],['負傷HP',d.hp?.injured||0],['MP',d.hp?.mp||0]].map(([k,v])=>`<div class="hp-block"><span>${k}</span><strong>${v}</strong></div>`).join('')}
             </div>
+            ${(d.hp?.normalBonus||d.hp?.injuredBonus||d.hp?.mpBonus) ? `<div style="font-size:.75rem;color:var(--text-dim);margin-top:.4rem">うちボーナス分： 通常HP+${d.hp?.normalBonus||0} / 負傷HP+${d.hp?.injuredBonus||0} / MP+${d.hp?.mpBonus||0}</div>` : ''}
           </div>
           <div class="form-section">
             <h4>戦闘修正</h4>
@@ -586,17 +587,22 @@ const App = {
           </div>
         </div>
         <div>
-          <div class="form-section"><h4>消耗ゲージ</h4>
+          <div class="form-section"><h4>消耗ゲージ・ゲインゲージ</h4>
             ${['肉体','気力','絆'].map(g=>`<div style="margin-bottom:.5rem;padding:.4rem;background:var(--surface);border-radius:4px">
-              <strong style="color:var(--accent2)">${g}</strong>
-              <span style="font-size:.82rem;margin-left:.5rem;color:var(--text-dim)">消耗値:${gauges[g]?.cost||9} / 獲得値:${gauges[g]?.gain||9} / ゲージ数:${gauges[g]?.boxes||3}</span>
+              <strong style="color:var(--accent2)">${g}消耗ゲージ</strong>
+              <span style="font-size:.82rem;margin-left:.5rem;color:var(--text-dim)">消耗値:${gauges[g]?.cost??9} / ゲージ数:${gauges[g]?.boxes??3}</span>
             </div>`).join('')}
+            <div style="margin-bottom:.5rem;padding:.4rem;background:var(--surface);border:1px solid var(--singer);border-radius:4px">
+              <strong style="color:var(--singer)">絆ゲインゲージ</strong>
+              <span style="font-size:.82rem;margin-left:.5rem;color:var(--text-dim)">獲得値:${gauges['絆ゲイン']?.gain??11} / ゲージ数:${gauges['絆ゲイン']?.boxes??3}</span>
+            </div>
           </div>
           <div class="form-section"><h4>HP</h4>
             <div class="hp-row">
               <div class="hp-block"><span>通常HP</span><strong>${d.hp?.normal||0}</strong></div>
               <div class="hp-block"><span>負傷HP</span><strong>${d.hp?.injured||0}</strong></div>
             </div>
+            ${(d.hp?.normalBonus||d.hp?.injuredBonus) ? `<div style="font-size:.75rem;color:var(--text-dim);margin-top:.4rem">うちボーナス分： 通常HP+${d.hp?.normalBonus||0} / 負傷HP+${d.hp?.injuredBonus||0}</div>` : ''}
           </div>
           ${d.skills && Object.keys(d.skills).length ? `<div class="form-section"><h4>スキル</h4>
             <div style="font-size:.82rem">
@@ -792,10 +798,11 @@ const App = {
           ].filter(Boolean).join('\n'),
           commands: commands.map(c => `${c.label}\n${c.value}`).join('\n\n'),
           status: [
-            { label: '通常HP',   value: d.hp?.normal||0,           max: d.hp?.normal||0 },
-            { label: '肉体ゲージ', value: d.gauges?.肉体?.boxes||3, max: d.gauges?.肉体?.boxes||3 },
-            { label: '気力ゲージ', value: d.gauges?.気力?.boxes||3, max: d.gauges?.気力?.boxes||3 },
-            { label: '絆ゲージ',  value: d.gauges?.絆?.boxes||3,   max: d.gauges?.絆?.boxes||3 },
+            { label: '通常HP',     value: d.hp?.normal||0,                  max: d.hp?.normal||0 },
+            { label: '肉体ゲージ', value: d.gauges?.肉体?.boxes??3,          max: d.gauges?.肉体?.boxes??3 },
+            { label: '気力ゲージ', value: d.gauges?.気力?.boxes??3,          max: d.gauges?.気力?.boxes??3 },
+            { label: '絆消耗ゲージ', value: d.gauges?.絆?.boxes??3,          max: d.gauges?.絆?.boxes??3 },
+            { label: '絆ゲインゲージ', value: d.gauges?.['絆ゲイン']?.boxes??3, max: d.gauges?.['絆ゲイン']?.boxes??3 },
           ],
           params: ABILITY_NAMES.map(n => ({ label: n, value: String(d.abilities?.[n]||10) })),
         }

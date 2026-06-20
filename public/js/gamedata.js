@@ -157,7 +157,7 @@ function buildSingerCcfoliaCommands(singerData) {
   const d = singerData;
   const cmds = [];
 
-  // 消耗チェック（3ゲージ）
+  // 消耗チェック（肉体・気力・絆の3消耗ゲージ）
   for (const gauge of ['肉体', '気力', '絆']) {
     const val = d.gauges?.[gauge]?.cost || 9;
     cmds.push({
@@ -165,6 +165,13 @@ function buildSingerCcfoliaCommands(singerData) {
       value: `2D10<=${val} [${gauge}消耗チェック 消耗値:${val}]`
     });
   }
+
+  // 絆獲得チェック（絆ゲインゲージ：消耗ゲージとは別の独立した判定）
+  const gainVal = d.gauges?.['絆ゲイン']?.gain || 11;
+  cmds.push({
+    label: '絆獲得チェック',
+    value: `2D10<=${gainVal} [絆獲得チェック 獲得値:${gainVal}]`
+  });
 
   // 歌姫スキルチェック
   for (const [name, val] of Object.entries(d.skills || {})) {

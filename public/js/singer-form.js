@@ -211,12 +211,15 @@ const SingerForm = {
       name: '', origin: '', age: '', level: 1, rank: 1, bond_level: 1,
       abilities: { 筋力: 10, 器用さ: 10, 敏捷: 10, 生命力: 10, 知力: 10, 精神力: 10 },
       skills: { 'アーカイア知識': 20, '歌術知識': 15, '蟲知識': 15, '回避': 10, '隠蔽': 5, '料理': 5 },
-      hp: { normal: 0, injured: 0 },
+      // hp.normal/injured は「能力値由来のベース値＋ボーナス」の合計（表示・保存値）
+      // hp.*Bonus は歌姫レベルアップ・歌姫能力（HPアップ等）による恒久加算分。能力値変更時もこの値は保持される
+      hp: { normal: 0, injured: 0, normalBonus: 0, injuredBonus: 0 },
       modifiers: { melee: 0, ranged: 0, evasion: 0, evasionRaw: 0, resistance: 0, defense: 0 },
       gauges: {
-        '肉体': { cost: 9, gain: 9,  boxes: 3 },
-        '気力': { cost: 9, gain: 9,  boxes: 3 },
-        '絆':   { cost: 9, gain: 11, boxes: 3 },
+        '肉体': { cost: 9, boxes: 3 },        // 消耗ゲージ：消耗値のみ
+        '気力': { cost: 9, boxes: 3 },        // 消耗ゲージ：消耗値のみ
+        '絆':   { cost: 9, boxes: 3 },        // 絆消耗ゲージ：消耗値のみ
+        '絆ゲイン': { gain: 11, boxes: 3 },   // 絆ゲインゲージ：獲得値のみ（絆消耗とは別の独立したゲージ）
       },
       singer_abilities: [], // [{no, name, memo}]
       singer_songs:     [], // [{no, name, rank, memo}]
@@ -378,9 +381,34 @@ const SingerForm = {
 
         <div class="form-section">
           <h4>HP</h4>
+          <p style="font-size:.8rem;color:var(--text-dim);margin-bottom:.5rem">「ベース値」は能力値から自動計算されます。「ボーナス」は歌姫レベルアップや歌姫能力（HPアップ等）による恒久加算分で、能力値を変更しても保持されます。</p>
           <div class="form-row">
-            <div class="form-group"><label>通常HP（自動計算:筋+器）</label><input type="number" name="shp_normal" value="${d.hp.normal}" id="shp-normal"></div>
-            <div class="form-group"><label>負傷HP（自動計算:敏+生）</label><input type="number" name="shp_injured" value="${d.hp.injured}" id="shp-injured"></div>
+            <div class="form-group">
+              <label>通常HP・ベース値（自動計算:筋+器）</label>
+              <input type="number" value="${(d.hp.normal||0) - (d.hp.normalBonus||0)}" id="shp-normal-base" readonly>
+            </div>
+            <div class="form-group">
+              <label>通常HP・ボーナス</label>
+              <input type="number" name="shp_normal_bonus" value="${d.hp.normalBonus||0}" id="shp-normal-bonus">
+            </div>
+            <div class="form-group">
+              <label>通常HP・合計（自動計算）</label>
+              <input type="number" name="shp_normal" value="${d.hp.normal}" id="shp-normal" readonly>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>負傷HP・ベース値（自動計算:敏+生）</label>
+              <input type="number" value="${(d.hp.injured||0) - (d.hp.injuredBonus||0)}" id="shp-injured-base" readonly>
+            </div>
+            <div class="form-group">
+              <label>負傷HP・ボーナス</label>
+              <input type="number" name="shp_injured_bonus" value="${d.hp.injuredBonus||0}" id="shp-injured-bonus">
+            </div>
+            <div class="form-group">
+              <label>負傷HP・合計（自動計算）</label>
+              <input type="number" name="shp_injured" value="${d.hp.injured}" id="shp-injured" readonly>
+            </div>
           </div>
         </div>
 
@@ -398,21 +426,28 @@ const SingerForm = {
         </div>
 
         <div class="form-section">
-          <h4>消耗ゲージ</h4>
+          <h4>消耗ゲージ・ゲインゲージ</h4>
+          <p style="font-size:.8rem;color:var(--text-dim);margin-bottom:.5rem">肉体・気力・絆の「消耗ゲージ」（消耗値で判定）と、絆の「ゲインゲージ」（獲得値で判定）は別個の独立したゲージです。</p>
           <div class="form-row">
             ${['肉体','気力','絆'].map(g => `
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem">
-              <strong style="color:var(--accent2)">${g}ゲージ</strong>
+              <strong style="color:var(--accent2)">${g}消耗ゲージ</strong>
               <div class="form-group" style="margin-top:.5rem"><label>消耗値</label>
-                <input type="number" min="1" max="20" name="gauge_${g}_cost" value="${gauges[g]?.cost || 9}" ${g==='絆'?'readonly':''}>
+                <input type="number" min="1" max="20" name="gauge_${g}_cost" value="${gauges[g]?.cost ?? 9}" ${g==='絆'?'readonly':''}>
               </div>
-              <div class="form-group"><label>獲得値</label>
-                <input type="number" min="1" max="20" name="gauge_${g}_gain" value="${gauges[g]?.gain || (g==='絆'?11:9)}" ${g==='絆'?'readonly':''}>
-              </div>
-              <div class="form-group"><label>ゲージ数</label>
-                <input type="number" min="1" max="10" name="gauge_${g}_boxes" value="${gauges[g]?.boxes || 3}">
+              <div class="form-group"><label>ゲージ数（ダメージボックス）</label>
+                <input type="number" min="1" max="10" name="gauge_${g}_boxes" value="${gauges[g]?.boxes ?? 3}">
               </div>
             </div>`).join('')}
+            <div style="background:var(--surface);border:1px solid var(--singer);border-radius:var(--radius);padding:.75rem">
+              <strong style="color:var(--singer)">絆ゲインゲージ</strong>
+              <div class="form-group" style="margin-top:.5rem"><label>獲得値</label>
+                <input type="number" min="1" max="20" name="gauge_絆ゲイン_gain" value="${gauges['絆ゲイン']?.gain ?? 11}" readonly>
+              </div>
+              <div class="form-group"><label>ゲージ数（ゲインボックス）</label>
+                <input type="number" min="1" max="10" name="gauge_絆ゲイン_boxes" value="${gauges['絆ゲイン']?.boxes ?? 3}">
+              </div>
+            </div>
           </div>
         </div>
 
@@ -505,6 +540,7 @@ const SingerForm = {
   collectForm() {
     const f = document.getElementById('singer-form');
     if (!f) return null;
+    this._recalcHP(); // 保存直前にベース+ボーナスの合計を再計算して確実に最新値にする
     const g  = n => f.querySelector(`[name="${n}"]`)?.value || '';
     const gi = n => parseInt(g(n)) || 0;
 
@@ -521,10 +557,13 @@ const SingerForm = {
     for (const name of ['肉体','気力','絆']) {
       gauges[name] = {
         cost:  gi(`gauge_${name}_cost`),
-        gain:  gi(`gauge_${name}_gain`),
         boxes: gi(`gauge_${name}_boxes`),
       };
     }
+    gauges['絆ゲイン'] = {
+      gain:  gi('gauge_絆ゲイン_gain'),
+      boxes: gi('gauge_絆ゲイン_boxes'),
+    };
 
     // 歌姫能力
     const singer_abilities = [];
@@ -577,7 +616,10 @@ const SingerForm = {
       name: g('sname'), origin: g('sorigin'), age: g('sage'),
       level: gi('slevel'), rank: gi('srank'), bond_level: gi('sbond'),
       abilities, skills, gauges,
-      hp: { normal: gi('shp_normal'), injured: gi('shp_injured') },
+      hp: {
+        normal:  gi('shp_normal'),  normalBonus:  gi('shp_normal_bonus'),
+        injured: gi('shp_injured'), injuredBonus: gi('shp_injured_bonus'),
+      },
       modifiers: {
         melee: gi('smod_melee'), ranged: gi('smod_ranged'),
         evasionRaw: gi('smod_evasion_raw'),
@@ -720,6 +762,29 @@ const SingerForm = {
     if (evasionInput) evasionInput.value = this.floorTo10(raw);
   },
 
+  // 通常HP/負傷HPを「能力値由来のベース値＋ボーナス」で再計算する
+  // ボーナス欄（歌姫レベルアップ・歌姫能力分）は能力値変更時も保持される
+  _recalcHP() {
+    const vals = {};
+    for (const name of ABILITY_NAMES) {
+      vals[name] = parseInt(document.querySelector(`[name="sab_${name}"]`)?.value) || 10;
+    }
+    const getBonus = id => parseInt(document.getElementById(id)?.value) || 0;
+    const setVal   = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+
+    const normalBase  = vals.筋力 + vals.器用さ;
+    const injuredBase = vals.敏捷 + vals.生命力;
+
+    const normalBonus  = getBonus('shp-normal-bonus');
+    const injuredBonus = getBonus('shp-injured-bonus');
+
+    setVal('shp-normal-base',  normalBase);
+    setVal('shp-injured-base', injuredBase);
+
+    setVal('shp-normal',  normalBase  + normalBonus);
+    setVal('shp-injured', injuredBase + injuredBonus);
+  },
+
   attachAutoCalc() {
     const updateAll = () => {
       const vals = {};
@@ -729,8 +794,7 @@ const SingerForm = {
       const mod = v => v - 10;
 
       const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-      setVal('shp-normal',      vals.筋力   + vals.器用さ);
-      setVal('shp-injured',     vals.敏捷   + vals.生命力);
+      this._recalcHP();
       setVal('smod-melee',      mod(vals.筋力)   + mod(vals.敏捷));
       setVal('smod-ranged',     mod(vals.器用さ)  + mod(vals.知力));
       setVal('smod-resistance', mod(vals.精神力) + mod(vals.生命力));
@@ -790,5 +854,12 @@ const SingerForm = {
       const evasionInput = document.getElementById('smod-evasion');
       if (evasionInput) evasionInput.value = this.floorTo10(raw);
     });
+
+    // HPボーナス欄を手動編集した場合も合計を再計算
+    ['shp-normal-bonus', 'shp-injured-bonus'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', () => this._recalcHP());
+    });
+    // 初回ロード時にベース値・合計を計算（保存済みのボーナスを保持したまま表示を整える）
+    this._recalcHP();
   }
 };

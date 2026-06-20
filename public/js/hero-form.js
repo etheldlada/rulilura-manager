@@ -64,7 +64,9 @@ const HeroForm = {
       name: '', nationality: '', job: '', age: '', gender: '男性', level: 1,
       abilities: { 筋力: 10, 器用さ: 10, 敏捷: 10, 生命力: 10, 知力: 10, 精神力: 10 },
       skills: {},
-      hp: { normal: 0, injured: 0, mp: 0 },
+      // hp.normal/injured/mp は「能力値由来のベース値＋ボーナス」の合計（表示・保存値）
+      // hp.*Bonus はレベルアップ・英雄能力（HPアップ等）による恒久加算分。能力値変更時もこの値は保持される
+      hp: { normal: 0, injured: 0, mp: 0, normalBonus: 0, injuredBonus: 0, mpBonus: 0 },
       modifiers: { melee: 0, ranged: 0, evasion: 0, evasionRaw: 0, resistance: 0, defense: 0, damage: 0 },
       weapons: [],
       armors: [], // [{name, defense, evasionPenalty}] 防具・盾の個別管理
@@ -181,10 +183,48 @@ const HeroForm = {
 
         <div class="form-section">
           <h4>HP / MP</h4>
+          <p style="font-size:.8rem;color:var(--text-dim);margin-bottom:.5rem">「ベース値」は能力値から自動計算されます。「ボーナス」はレベルアップや英雄能力（HPアップ等）による恒久加算分で、能力値を変更しても保持されます。シートに記入する数値は「合計」です。</p>
           <div class="form-row">
-            <div class="form-group"><label>通常HP（自動計算:筋+器）</label><input type="number" name="hp_normal" value="${d.hp.normal}" id="hp-normal-input"></div>
-            <div class="form-group"><label>負傷HP（自動計算:敏+生）</label><input type="number" name="hp_injured" value="${d.hp.injured}" id="hp-injured-input"></div>
-            <div class="form-group"><label>MP（自動計算:知+精）</label><input type="number" name="hp_mp" value="${d.hp.mp}" id="hp-mp-input"></div>
+            <div class="form-group">
+              <label>通常HP・ベース値（自動計算:筋+器）</label>
+              <input type="number" value="${(d.hp.normal||0) - (d.hp.normalBonus||0)}" id="hp-normal-base" readonly>
+            </div>
+            <div class="form-group">
+              <label>通常HP・ボーナス（レベルアップ等で加算）</label>
+              <input type="number" name="hp_normal_bonus" value="${d.hp.normalBonus||0}" id="hp-normal-bonus">
+            </div>
+            <div class="form-group">
+              <label>通常HP・合計（自動計算）</label>
+              <input type="number" name="hp_normal" value="${d.hp.normal}" id="hp-normal-input" readonly>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>負傷HP・ベース値（自動計算:敏+生）</label>
+              <input type="number" value="${(d.hp.injured||0) - (d.hp.injuredBonus||0)}" id="hp-injured-base" readonly>
+            </div>
+            <div class="form-group">
+              <label>負傷HP・ボーナス</label>
+              <input type="number" name="hp_injured_bonus" value="${d.hp.injuredBonus||0}" id="hp-injured-bonus">
+            </div>
+            <div class="form-group">
+              <label>負傷HP・合計（自動計算）</label>
+              <input type="number" name="hp_injured" value="${d.hp.injured}" id="hp-injured-input" readonly>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>MP・ベース値（自動計算:知+精）</label>
+              <input type="number" value="${(d.hp.mp||0) - (d.hp.mpBonus||0)}" id="hp-mp-base" readonly>
+            </div>
+            <div class="form-group">
+              <label>MP・ボーナス</label>
+              <input type="number" name="hp_mp_bonus" value="${d.hp.mpBonus||0}" id="hp-mp-bonus">
+            </div>
+            <div class="form-group">
+              <label>MP・合計（自動計算）</label>
+              <input type="number" name="hp_mp" value="${d.hp.mp}" id="hp-mp-input" readonly>
+            </div>
           </div>
         </div>
 
@@ -265,6 +305,7 @@ const HeroForm = {
   collectForm() {
     const f = document.getElementById('hero-form');
     if (!f) return null;
+    this._recalcHP(); // 保存直前にベース+ボーナスの合計を再計算して確実に最新値にする
     const g  = n => f.querySelector(`[name="${n}"]`)?.value || '';
     const gi = n => parseInt(g(n)) || 0;
 
@@ -314,7 +355,11 @@ const HeroForm = {
       name: g('name'), nationality: g('nationality'), job: g('job'),
       age: g('age'), gender: g('gender'), level: gi('level'),
       abilities, skills,
-      hp: { normal: gi('hp_normal'), injured: gi('hp_injured'), mp: gi('hp_mp') },
+      hp: {
+        normal:  gi('hp_normal'),  normalBonus:  gi('hp_normal_bonus'),
+        injured: gi('hp_injured'), injuredBonus: gi('hp_injured_bonus'),
+        mp:      gi('hp_mp'),      mpBonus:      gi('hp_mp_bonus'),
+      },
       modifiers: {
         melee: gi('mod_melee'), ranged: gi('mod_ranged'),
         evasionRaw: gi('mod_evasion_raw'),
@@ -439,6 +484,33 @@ const HeroForm = {
     if (evasionInput) evasionInput.value = this.floorTo10(raw);
   },
 
+  // 通常HP/負傷HP/MPを「能力値由来のベース値＋ボーナス」で再計算する
+  // ボーナス欄（レベルアップ・英雄能力分）は能力値変更時も保持される
+  _recalcHP() {
+    const vals = {};
+    for (const ab of ABILITY_NAMES) {
+      vals[ab] = parseInt(document.querySelector(`[name="ab_${ab}"]`)?.value) || 10;
+    }
+    const getBonus = id => parseInt(document.getElementById(id)?.value) || 0;
+    const setVal   = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+
+    const normalBase  = vals.筋力 + vals.器用さ;
+    const injuredBase = vals.敏捷 + vals.生命力;
+    const mpBase       = vals.知力 + vals.精神力;
+
+    const normalBonus  = getBonus('hp-normal-bonus');
+    const injuredBonus = getBonus('hp-injured-bonus');
+    const mpBonus       = getBonus('hp-mp-bonus');
+
+    setVal('hp-normal-base',  normalBase);
+    setVal('hp-injured-base', injuredBase);
+    setVal('hp-mp-base',      mpBase);
+
+    setVal('hp-normal-input',  normalBase  + normalBonus);
+    setVal('hp-injured-input', injuredBase + injuredBonus);
+    setVal('hp-mp-input',      mpBase      + mpBonus);
+  },
+
   attachAutoCalc() {
     document.querySelectorAll('[name^="ab_"]').forEach(el => {
       el.addEventListener('input', () => {
@@ -452,9 +524,7 @@ const HeroForm = {
 
         const mod = v => v - 10;
         const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-        setVal('hp-normal-input',  vals.筋力   + vals.器用さ);
-        setVal('hp-injured-input', vals.敏捷   + vals.生命力);
-        setVal('hp-mp-input',      vals.知力   + vals.精神力);
+        this._recalcHP();
         setVal('mod-melee',        mod(vals.筋力)    + mod(vals.敏捷));
         setVal('mod-ranged',       mod(vals.器用さ)  + mod(vals.知力));
         setVal('mod-resistance',   mod(vals.精神力)  + mod(vals.生命力));
@@ -499,5 +569,12 @@ const HeroForm = {
       const evasionInput = document.getElementById('mod-evasion');
       if (evasionInput) evasionInput.value = this.floorTo10(raw);
     });
+
+    // HPボーナス欄を手動編集した場合も合計を再計算
+    ['hp-normal-bonus', 'hp-injured-bonus', 'hp-mp-bonus'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', () => this._recalcHP());
+    });
+    // 初回ロード時にベース値・合計を計算（保存済みのボーナスを保持したまま表示を整える）
+    this._recalcHP();
   }
 };
