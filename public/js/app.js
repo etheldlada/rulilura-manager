@@ -249,8 +249,9 @@ const App = {
     const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}/${id}`;
     const item = await API.get(endpoint).catch(() => null);
     if (!item) return;
-    // 現在の画面を「前のページ」として記録（detail/edit/ccfolia以外）
-    if (!['detail','edit','ccfolia'].includes(this.currentPage)) {
+    // _prevPageは一覧系ページ（mypage/public）のみを保持する。
+    // detail/edit/ccfoliaから来た場合は既存の_prevPageを維持し、上書きしない。
+    if (['mypage','public'].includes(this.currentPage)) {
       this._prevPage = this.currentPage;
     }
     this._detailItem = item;
@@ -293,7 +294,9 @@ const App = {
 
   // ===== 作成ページへ遷移 =====
   openCreateModal(type) {
-    this._prevPage = this.currentPage;
+    if (['mypage','public'].includes(this.currentPage)) {
+      this._prevPage = this.currentPage;
+    }
     this.editingId = null;
     this.editingType = type;
     this.currentPage = 'edit';
@@ -304,7 +307,11 @@ const App = {
 
   // ===== 編集ページへ遷移 =====
   async gotoEdit(type, id) {
-    this._prevPage = this.currentPage;
+    // _prevPageは一覧系ページ（mypage/public）のみを保持する。
+    // detail/edit/ccfoliaから来た場合は既存の_prevPageを維持し、上書きしない。
+    if (['mypage','public'].includes(this.currentPage)) {
+      this._prevPage = this.currentPage;
+    }
     const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}/${id}`;
     const item = await API.get(endpoint).catch(() => null);
     if (!item) return;
@@ -349,12 +356,11 @@ const App = {
   },
 
   _cancelEdit() {
-    const prev = this._prevPage || 'mypage';
-    // 詳細ページから来た場合は詳細に戻る
-    if (prev === 'detail' && this._detailItem && this._detailType) {
+    // 編集前に詳細ページを見ていた場合（_detailItemが現在編集中のキャラと一致する場合）は詳細に戻る
+    if (this.editingId && this._detailItem && this._detailType === this.editingType && this._detailItem.id === this.editingId) {
       this.gotoDetail(this._detailType, this._detailItem.id);
     } else {
-      this.goto(prev);
+      this.goto(this._prevPage || 'mypage');
     }
   },
 
