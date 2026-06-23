@@ -699,9 +699,9 @@ const App = {
         </div>
       </div>
       ${d.weapons?.length ? `<div class="form-section"><h4>搭載武器</h4>
-        <div style="overflow-x:auto"><table style="width:100%;font-size:.8rem;border-collapse:collapse;min-width:500px">
-          <thead><tr>${['武器名','最終命中','ダメージ','射程','回数','条件','重さ'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
-          <tbody>${d.weapons.map(w=>`<tr>${[w.name,w.finalHit||'-',w.damage||'-',w.range||'-',w.count||'1',w.condition||'-',w.weight||0].map(v=>`<td style="padding:.3rem;border-bottom:1px solid var(--border)">${v}</td>`).join('')}</tr>`).join('')}</tbody>
+        <div style="overflow-x:auto"><table style="width:100%;font-size:.8rem;border-collapse:collapse;min-width:680px">
+          <thead><tr>${['武器名','射程','最終命中','ダメージ','回数','条件','重さ','ハードポイント','メモ'].map(h=>`<th style="padding:.3rem;border-bottom:1px solid var(--border);color:var(--text-dim)">${h}</th>`).join('')}</tr></thead>
+          <tbody>${d.weapons.map(w=>`<tr>${[w.name,w.range||'-',w.finalHit||'-',w.damage||'-',w.count||'1',w.condition||'-',w.weight||0,w.hardpoint||'-',w.memo||'-'].map(v=>`<td style="padding:.3rem;border-bottom:1px solid var(--border)">${v}</td>`).join('')}</tr>`).join('')}</tbody>
         </table></div></div>` : ''}
       ${d.special_rules ? `<div class="form-section"><h4>特殊ルール</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.special_rules}</pre></div>` : ''}
       ${advSection}`;

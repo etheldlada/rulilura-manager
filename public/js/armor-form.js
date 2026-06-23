@@ -55,17 +55,27 @@ const ArmorForm = {
 
     const weaponRows = (d.weapons || []).map((w, i) => `
       <tr data-wi="${i}">
-        <td><input name="awn"   value="${w.name||''}"       placeholder="武器名"></td>
-        <td><input name="awbh"  value="${w.baseHit||''}"    placeholder="30"   style="width:50px" type="number"></td>
-        <td><input name="awmod" value="${w.combatMod||''}"  placeholder="±0"   style="width:50px" type="number" class="armor-weapon-calc"></td>
+        <td><input name="awn"   value="${w.name||''}"       placeholder="武器名" style="min-width:90px"></td>
+        <td>
+          <select name="awr" class="armor-weapon-range" style="width:55px">
+            <option value="白" ${(w.range||'白')==='白'?'selected':''}>白</option>
+            <option value="1" ${w.range==='1'?'selected':''}>1</option>
+            <option value="2" ${w.range==='2'?'selected':''}>2</option>
+            <option value="3" ${w.range==='3'?'selected':''}>3</option>
+            <option value="4" ${w.range==='4'?'selected':''}>4</option>
+          </select>
+        </td>
+        <td><input name="awbh"  value="${w.baseHit||''}"    placeholder="30"   style="width:50px" type="number" class="armor-weapon-calc"></td>
+        <td><input name="awmod" value="${w.combatMod||0}"   style="width:50px" type="number" class="armor-weapon-mod" readonly title="射程「白」なら白兵修正、それ以外は射撃修正を自動入力"></td>
         <td><input name="awsk"  value="${w.skill||''}"      placeholder="剣技"  style="width:60px"></td>
         <td><input name="awskv" value="${w.skillVal||''}"   placeholder="20"   style="width:50px" type="number" class="armor-weapon-calc"></td>
         <td style="background:rgba(233,69,96,.1);font-weight:bold;text-align:center;padding:.2rem .4rem;min-width:50px" class="final-hit">${(w.baseHit||0)+(w.combatMod||0)+(w.skillVal||0)||'-'}</td>
-        <td><input name="awd"   value="${w.damage||''}"     placeholder="2D10+6"></td>
-        <td><input name="awr"   value="${w.range||'白'}"    style="width:40px"></td>
+        <td><input name="awd"   value="${w.damage||''}"     placeholder="2D10+6" style="min-width:80px"></td>
         <td><input name="awct"  value="${w.count||'1'}"     style="width:40px"></td>
-        <td><input name="awcond" value="${w.condition||''}" placeholder="歌5"></td>
+        <td><input name="awcond" value="${w.condition||''}" placeholder="歌5"   style="width:55px"></td>
         <td><input name="awwt"  value="${w.weight||''}"     style="width:45px" type="number" class="armor-weapon-weight"></td>
+        <td><input name="awhp"  value="${(w.hardpoint||'').replace(/"/g,'&quot;')}" placeholder="手・肩×2など" style="width:90px"></td>
+        <td><input name="awmemo" value="${(w.memo||'').replace(/"/g,'&quot;')}" placeholder="メモ" style="min-width:100px"></td>
         <td><button type="button" class="btn btn-sm btn-danger" onclick="ArmorForm.removeWeapon(${i})">×</button></td>
       </tr>`).join('');
 
@@ -141,18 +151,18 @@ const ArmorForm = {
         <div class="form-section">
           <h4>搭載武器</h4>
           <div style="overflow-x:auto">
-            <table class="weapon-table" style="min-width:750px">
+            <table class="weapon-table" style="min-width:900px">
               <thead><tr>
-                <th>武器名</th><th>基本命中</th><th>戦闘修正</th><th>武器スキル</th>
+                <th>武器名</th><th>射程</th><th>基本命中</th><th style="background:rgba(255,193,7,.12)">戦闘修正<br><small style="font-weight:normal">(自動)</small></th><th>武器スキル</th>
                 <th>スキル値</th><th style="background:rgba(233,69,96,.1)">最終命中</th>
-                <th>ダメージ</th><th>射程</th><th>回数</th><th>条件</th><th>重さ</th><th></th>
+                <th>ダメージ</th><th>回数</th><th>条件</th><th>重さ</th><th>ハードポイント</th><th>メモ</th><th></th>
               </tr></thead>
               <tbody id="armor-weapon-tbody">${weaponRows}</tbody>
             </table>
           </div>
           <div style="display:flex;align-items:center;gap:.75rem;margin-top:.5rem;flex-wrap:wrap">
             <button type="button" class="btn btn-sm btn-secondary" onclick="ArmorForm.addWeapon()">＋ 武器を追加</button>
-            <span style="font-size:.78rem;color:var(--text-dim)">最終命中 = 基本命中 + 戦闘修正 + スキル値</span>
+            <span style="font-size:.78rem;color:var(--text-dim)">最終命中 = 基本命中 + 戦闘修正 + スキル値（戦闘修正は射程「白」なら白兵修正・それ以外は射撃修正を自動入力）</span>
             <span style="font-size:.78rem;color:var(--accent2)">使用荷重合計: <strong id="used-load-display">0</strong> / 最大荷重: <strong id="max-load-display">${adv.max_load||0}</strong>（残り: <strong id="remain-load-display">${(adv.max_load||0) - (d.weapons||[]).reduce((s,w)=>s+(w.weight||0),0)}</strong>）</span>
           </div>
         </div>
@@ -274,6 +284,8 @@ const ArmorForm = {
         count:    row.querySelector('[name=awct]')?.value   || '1',
         condition:row.querySelector('[name=awcond]')?.value || '',
         weight:   parseInt(row.querySelector('[name=awwt]')?.value) || 0,
+        hardpoint:row.querySelector('[name=awhp]')?.value   || '',
+        memo:     row.querySelector('[name=awmemo]')?.value || '',
       });
     }
 
@@ -329,6 +341,28 @@ const ArmorForm = {
     };
   },
 
+  // 武器1行分の戦闘修正（白兵/射撃）を、現在の射程と最終白兵・最終射撃修正から自動算出してセットする
+  _recalcWeaponCombatMod(tr) {
+    if (!tr) return;
+    const range = tr.querySelector('[name=awr]')?.value || '白';
+    const finalMelee  = (parseInt(document.querySelector('[name="hero_melee"]')?.value)  || 0) + (parseInt(document.querySelector('[name="armor_melee"]')?.value)  || 0);
+    const finalRanged = (parseInt(document.querySelector('[name="hero_ranged"]')?.value) || 0) + (parseInt(document.querySelector('[name="armor_ranged"]')?.value) || 0);
+    const mod = (range === '白') ? finalMelee : finalRanged;
+
+    const modInput = tr.querySelector('[name=awmod]');
+    if (modInput) modInput.value = mod;
+
+    const bh  = parseInt(tr.querySelector('[name=awbh]')?.value)  || 0;
+    const skv = parseInt(tr.querySelector('[name=awskv]')?.value) || 0;
+    const finalTd = tr.querySelector('.final-hit');
+    if (finalTd) finalTd.textContent = bh + mod + skv;
+  },
+
+  // 全武器行の戦闘修正を再計算する（白兵修正・射撃修正の値が変わった時に呼ぶ）
+  _recalcAllWeaponCombatMod() {
+    document.querySelectorAll('#armor-weapon-tbody tr').forEach(tr => this._recalcWeaponCombatMod(tr));
+  },
+
   addWeapon() {
     const tbody = document.getElementById('armor-weapon-tbody');
     if (!tbody) return;
@@ -336,20 +370,31 @@ const ArmorForm = {
     const tr = document.createElement('tr');
     tr.dataset.wi = i;
     tr.innerHTML = `
-      <td><input name="awn" placeholder="武器名"></td>
+      <td><input name="awn" placeholder="武器名" style="min-width:90px"></td>
+      <td>
+        <select name="awr" class="armor-weapon-range" style="width:55px">
+          <option value="白" selected>白</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
+      </td>
       <td><input name="awbh"  placeholder="30"   style="width:50px" type="number" class="armor-weapon-calc"></td>
-      <td><input name="awmod" placeholder="±0"   style="width:50px" type="number" class="armor-weapon-calc"></td>
+      <td><input name="awmod" value="0" style="width:50px" type="number" class="armor-weapon-mod" readonly title="射程「白」なら白兵修正、それ以外は射撃修正を自動入力"></td>
       <td><input name="awsk"  placeholder="剣技"  style="width:60px"></td>
       <td><input name="awskv" placeholder="20"   style="width:50px" type="number" class="armor-weapon-calc"></td>
       <td style="background:rgba(233,69,96,.1);font-weight:bold;text-align:center;padding:.2rem .4rem;min-width:50px" class="final-hit">-</td>
-      <td><input name="awd"  placeholder="2D10+6"></td>
-      <td><input name="awr"  value="白" style="width:40px"></td>
+      <td><input name="awd"  placeholder="2D10+6" style="min-width:80px"></td>
       <td><input name="awct" value="1"  style="width:40px"></td>
-      <td><input name="awcond" placeholder="歌5"></td>
+      <td><input name="awcond" placeholder="歌5" style="width:55px"></td>
       <td><input name="awwt" style="width:45px" type="number" class="armor-weapon-weight"></td>
+      <td><input name="awhp" placeholder="手・肩×2など" style="width:90px"></td>
+      <td><input name="awmemo" placeholder="メモ" style="min-width:100px"></td>
       <td><button type="button" class="btn btn-sm btn-danger" onclick="ArmorForm.removeWeapon(${i})">×</button></td>`;
     tbody.appendChild(tr);
     this._attachRowCalc(tr);
+    this._recalcWeaponCombatMod(tr);
     this._updateLoadDisplay();
   },
 
@@ -411,6 +456,10 @@ const ArmorForm = {
     tr.querySelectorAll('.armor-weapon-weight').forEach(el => {
       el.addEventListener('input', () => this._updateLoadDisplay());
     });
+    // 射程変更時に戦闘修正（白兵/射撃）を自動で切り替える
+    tr.querySelectorAll('.armor-weapon-range').forEach(el => {
+      el.addEventListener('change', () => this._recalcWeaponCombatMod(tr));
+    });
   },
 
   _updateLoadDisplay() {
@@ -433,13 +482,14 @@ const ArmorForm = {
   },
 
   attachAutoCalc() {
-    // 戦闘修正の合計
+    // 戦闘修正の合計（白兵・射撃が変わった時は武器の戦闘修正欄も連動して再計算する）
     ['melee','ranged','evasion','resistance','recon'].forEach(key => {
       const hEl = document.querySelector(`[name="hero_${key}"]`);
       const aEl = document.querySelector(`[name="armor_${key}"]`);
       const upd = () => {
         const td = document.getElementById(`final_${key}`);
         if (td) td.textContent = (parseInt(hEl?.value)||0) + (parseInt(aEl?.value)||0);
+        if (key === 'melee' || key === 'ranged') this._recalcAllWeaponCombatMod();
       };
       hEl?.addEventListener('input', upd);
       aEl?.addEventListener('input', upd);
@@ -448,8 +498,9 @@ const ArmorForm = {
     // 最大荷重変更時に再計算
     document.getElementById('adv-max-load')?.addEventListener('input', () => this._updateLoadDisplay());
 
-    // 既存行のイベント付与
+    // 既存行のイベント付与＋初回の戦闘修正・荷重計算
     document.querySelectorAll('#armor-weapon-tbody tr').forEach(tr => this._attachRowCalc(tr));
+    this._recalcAllWeaponCombatMod();
     this._updateLoadDisplay();
   },
 
