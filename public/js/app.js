@@ -859,7 +859,16 @@ const App = {
             { label: '負傷HP', value: d.hp?.injured||0, max: d.hp?.injured||0 },
             { label: 'MP', value: d.hp?.mp||0, max: d.hp?.mp||0 },
           ],
-          params: ABILITY_NAMES.map(n => ({ label: n, value: String(d.abilities?.[n]||10) })),
+          params: [
+            ...ABILITY_NAMES.map(n => ({ label: n, value: String(d.abilities?.[n]||10) })),
+            ...ABILITY_NAMES.map(n => {
+              const mod = (d.abilities?.[n]||10) - 10;
+              return { label: `${n}修正`, value: signedStr(mod) };
+            }),
+            { label: '白兵修正', value: signedStr(d.modifiers?.melee||0) },
+            { label: '射撃修正', value: signedStr(d.modifiers?.ranged||0) },
+            { label: '抵抗修正', value: signedStr(d.modifiers?.resistance||0) },
+          ],
         }
       };
     } else if (type === 'singer') {
@@ -915,6 +924,7 @@ const App = {
             { label: '気力消耗値', value: String(d.gauges?.気力?.cost ?? 9) },
             { label: '絆消耗値',   value: String(d.gauges?.絆?.cost ?? 9) },
             { label: '絆獲得値',   value: String(d.gauges?.['絆ゲイン']?.gain ?? 11) },
+            { label: '歌術補正',   value: signedStr(parseInt(d.song_cost_mod)||0) },
           ],
         }
       };
@@ -938,11 +948,13 @@ const App = {
             { label: '大破HP', value: d.hp?.large||0, max: d.hp?.large||0 },
           ],
           params: [
-            { label: '白兵', value: String(finalMelee>=0?'+':'') + finalMelee },
-            { label: '射撃', value: String(finalRanged>=0?'+':'') + finalRanged },
-            { label: '回避', value: String((d.hero_evasion||0)+(d.armor_evasion||0)) },
-            { label: '抵抗', value: String((d.hero_resistance||0)+(d.armor_resistance||0)) },
-            { label: '防御値', value: String(d.defense||0) },
+            { label: '白兵',       value: signedStr(finalMelee) },
+            { label: '射撃',       value: signedStr(finalRanged) },
+            { label: '回避',       value: signedStr((d.hero_evasion||0)+(d.armor_evasion||0)) },
+            { label: '抵抗',       value: signedStr((d.hero_resistance||0)+(d.armor_resistance||0)) },
+            { label: '偵察',       value: String((d.hero_recon||0)+(d.armor_recon||0)) },
+            { label: '防御値',     value: String(d.defense||0) },
+            { label: 'ダメージ修正', value: signedStr(d.armor_damage_mod||0) },
           ],
         }
       };

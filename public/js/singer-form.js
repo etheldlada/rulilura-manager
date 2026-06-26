@@ -479,7 +479,7 @@ const SingerForm = {
             <div style="background:var(--surface);border:1px solid var(--singer);border-radius:var(--radius);padding:.75rem">
               <strong style="color:var(--singer)">絆ゲインゲージ</strong>
               <div class="form-group" style="margin-top:.5rem"><label>獲得値</label>
-                <input type="number" min="1" max="20" name="gauge_絆ゲイン_gain" value="${gauges['絆ゲイン']?.gain ?? 11}" readonly>
+                <input type="number" min="1" max="20" name="gauge_絆ゲイン_gain" value="${gauges['絆ゲイン']?.gain ?? 11}">
               </div>
               <div class="form-group"><label>ゲージ数（ゲインボックス）</label>
                 <input type="number" min="1" max="10" name="gauge_絆ゲイン_boxes" value="${gauges['絆ゲイン']?.boxes ?? 3}">

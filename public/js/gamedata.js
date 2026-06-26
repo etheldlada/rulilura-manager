@@ -85,24 +85,23 @@ const SINGER_SKILLS = [
 
 const ABILITY_NAMES = ['筋力', '器用さ', '敏捷', '生命力', '知力', '精神力'];
 
+// 符号付き数値文字列（ccfolia パラメータ参照用）
+function signedStr(v) { return (v >= 0 ? '+' : '') + v; }
+
 // ccfoliaのコマンド生成
 function buildCcfoliaCommands(heroData) {
   const d = heroData;
   const cmds = [];
 
   // 修正値を取得
-  const meleeMod      = d.modifiers?.melee      || 0; // 白兵修正
-  const rangedMod     = d.modifiers?.ranged     || 0; // 射撃修正
-  const strMod        = (d.abilities?.['筋力'] || 10) - 10; // 筋力修正（白兵ダメージ用）
+  const strMod = (d.abilities?.['筋力'] || 10) - 10; // 筋力修正（白兵ダメージ用）
+  const dmgMod = d.modifiers?.damage || 0;            // ダメージ修正（能力ボーナス等）
 
-  // 能力チェック
+  // 能力チェック（パラメータ参照: {筋力修正} 等）
   for (const ab of ABILITY_NAMES) {
-    const val = d.abilities?.[ab] || 10;
-    const mod = val - 10;
-    const suc = 50 + mod;
     cmds.push({
       label: `${ab}チェック`,
-      value: `1D100<=${suc} [${ab}チェック 成功値:${suc}]`
+      value: `1D100<=50{${ab}修正} [${ab}チェック]`
     });
   }
 
@@ -120,28 +119,25 @@ function buildCcfoliaCommands(heroData) {
   for (const w of d.weapons || []) {
     if (!w.name) continue;
 
-    const isMelee = (w.range === '白');
-    const combatMod = isMelee ? meleeMod : rangedMod;
-    const modLabel  = isMelee ? '白兵修正' : '射撃修正';
-
-    // 命中値 = フォーム入力値（基本命中）＋ 白兵 or 射撃修正
+    const isMelee  = (w.range === '白');
+    const modLabel = isMelee ? '白兵修正' : '射撃修正';
     const baseHit  = w.hit || 0;
-    const finalHit = baseHit + combatMod;
-    const hitSign  = combatMod >= 0 ? `+${combatMod}` : `${combatMod}`;
 
+    // 命中: 基本命中 ＋ {白兵修正} or {射撃修正}（パラメータ参照）
     cmds.push({
       label: `攻撃:${w.name}`,
-      value: `1D100<=${finalHit} [${w.name}命中 基本${baseHit}${hitSign}(${modLabel})]`
+      value: `1D100<=${baseHit}{${modLabel}} [${w.name}命中 基本${baseHit}+{${modLabel}}]`
     });
 
-    // ダメージ = ダイス式 ＋ 筋力修正（白兵のみ）
+    // ダメージ: 白兵＝筋力修正＋ダメージ修正、射撃＝ダメージ修正のみ
     if (w.damage) {
+      const dmgBonus = isMelee ? strMod + dmgMod : dmgMod;
       let dmgExpr = w.damage;
       let dmgNote = w.name;
-      if (isMelee && strMod !== 0) {
-        const strSign = strMod >= 0 ? `+${strMod}` : `${strMod}`;
-        dmgExpr = `${w.damage}${strSign}`;
-        dmgNote = `${w.name} 筋力修正${strSign}込み`;
+      if (dmgBonus !== 0) {
+        const sign = signedStr(dmgBonus);
+        dmgExpr = `${w.damage}${sign}`;
+        dmgNote = `${w.name} 修正${sign}込み`;
       }
       cmds.push({
         label: `ダメージ:${w.name}`,
@@ -178,18 +174,14 @@ function buildSingerCcfoliaCommands(singerData) {
     }
   }
 
-  // 特殊起動チェック
-  const spiritVal = d.abilities?.['精神力'] || 10;
+  // 特殊起動チェック（パラメータ参照: {精神力}）
   cmds.push({
-    value: `2D10<=${spiritVal} [特殊起動【精神力】チェック]`
+    value: `2D10<={精神力} [特殊起動【精神力】チェック]`
   });
 
-  // 歌術判定（汎用）：歌術を使う時に共通で使うコマンド。
-  // パラメータ「気力消耗値」に、シートで記入した補正値（歌姫能力・歌術アイテムの効果分）を自動で加算する。
-  const songCostMod = parseInt(d.song_cost_mod) || 0;
-  const songCostModSign = songCostMod >= 0 ? `+${songCostMod}` : `${songCostMod}`;
+  // 歌術判定（汎用）：パラメータ「気力消耗値」「歌術補正」を参照
   cmds.push({
-    value: `2D10<={気力消耗値}${songCostModSign} [歌術判定 気力消耗チェック 消耗値:{気力消耗値}${songCostModSign}（歌姫能力・歌術アイテム補正込み）]`
+    value: `2D10<={気力消耗値}{歌術補正} [歌術判定 気力消耗チェック 消耗値:{気力消耗値}{歌術補正}（歌姫能力・歌術アイテム補正込み）]`
   });
 
   // 戦闘系歌姫：武器攻撃コマンド（weapons配列がある場合のみ）
@@ -230,8 +222,17 @@ function buildSingerCcfoliaCommands(singerData) {
 function buildArmorCcfoliaCommands(armorData) {
   const d = armorData;
   const cmds = [];
-  const damageMod = d.armor_damage_mod || 0;
-  const dmgSign   = damageMod >= 0 ? `+${damageMod}` : `${damageMod}`;
+  const damageMod  = d.armor_damage_mod || 0;
+  const dmgSign    = damageMod >= 0 ? `+${damageMod}` : `${damageMod}`;
+  const finalRecon = (d.hero_recon || 0) + (d.armor_recon || 0);
+
+  // 偵察チェック
+  if (finalRecon > 0) {
+    cmds.push({
+      label: '偵察',
+      value: `1D100<=${finalRecon} [偵察チェック 偵察${finalRecon}]`
+    });
+  }
 
   // 武器攻撃
   for (const w of d.weapons || []) {
