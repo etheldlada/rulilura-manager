@@ -449,6 +449,28 @@ const App = {
       return '';
     })();
 
+    // 歌術アイテム表示
+    const songItemsHTML = (() => {
+      if (!d.song_items || !d.song_items.length) return '';
+      const rows = d.song_items.map(item => `
+        <tr>
+          <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);white-space:nowrap"><strong>${item.name}</strong></td>
+          <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text-dim)">${item.effect||(SONG_ITEMS_CATALOG.find(c=>c.no===item.no)?.effect)||''}</td>
+          <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem">${item.memo||''}</td>
+        </tr>`).join('');
+      return `<div class="form-section"><h4>歌術アイテム（${d.song_items.length}個）</h4>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:400px">
+            <thead><tr>
+              <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left;white-space:nowrap">アイテム名</th>
+              <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果</th>
+              <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">メモ</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div></div>`;
+    })();
+
     return `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
         <div>
@@ -499,11 +521,12 @@ const App = {
           <tfoot><tr style="font-weight:bold;background:var(--surface)"><td style="padding:.3rem">合計</td><td style="padding:.3rem">${d.armors.reduce((s,a)=>s+(a.defense||0),0)}</td><td style="padding:.3rem">${d.armors.reduce((s,a)=>s+(a.evasionPenalty||0),0)}</td></tr></tfoot>
         </table></div></div>` : ''}
       ${heroAbilitiesHTML}
+      ${songItemsHTML}
       ${d.skills && Object.keys(d.skills).length ? `<div class="form-section"><h4>スキル</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.3rem;font-size:.82rem">
           ${Object.entries(d.skills).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem .5rem;background:var(--surface);border-radius:4px"><span>${k}</span><strong>${v} <span style="color:var(--text-dim)">(${50+v})</span></strong></div>`).join('')}
         </div></div>` : ''}
-      ${d.equipment ? `<div class="form-section"><h4>その他の所持品</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.equipment}</pre></div>` : ''}
+      ${d.equipment ? `<div class="form-section"><h4>一般アイテム</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.equipment}</pre></div>` : ''}
       ${d.notes ? `<div class="form-section"><h4>メモ</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.notes}</pre></div>` : ''}`;
   },
 
@@ -581,8 +604,7 @@ const App = {
     const combatHTML = (() => {
       const hasWeapons  = d.weapons && d.weapons.length > 0;
       const hasArmors   = d.armors  && d.armors.length  > 0;
-      const hasEquip    = !!d.equipment;
-      if (!hasWeapons && !hasArmors && !hasEquip) return '';
+      if (!hasWeapons && !hasArmors) return '';
       return `<div class="form-section" style="border-color:var(--singer)">
         <h4 style="color:var(--singer)">⚔ 戦闘系歌姫：武器・防具</h4>
         ${hasWeapons ? `<div style="overflow-x:auto;margin-bottom:.5rem">
@@ -596,8 +618,29 @@ const App = {
             <tbody>${d.armors.map(a=>`<tr><td style="padding:.3rem;border-bottom:1px solid var(--border)">${a.name||'-'}</td><td style="padding:.3rem;border-bottom:1px solid var(--border)">${a.defense||0}</td><td style="padding:.3rem;border-bottom:1px solid var(--border)">${a.evasionPenalty||0}</td></tr>`).join('')}</tbody>
             <tfoot><tr style="font-weight:bold;background:var(--surface)"><td style="padding:.3rem">合計</td><td style="padding:.3rem">${d.armors.reduce((s,a)=>s+(a.defense||0),0)}</td><td style="padding:.3rem">${d.armors.reduce((s,a)=>s+(a.evasionPenalty||0),0)}</td></tr></tfoot>
           </table></div>` : ''}
-        ${hasEquip ? `<div style="font-size:.83rem"><strong style="color:var(--text-dim)">その他装備：</strong>${d.equipment}</div>` : ''}
       </div>`;
+    })();
+
+    // 歌術アイテム表示
+    const songItemsHTML = (() => {
+      if (!d.song_items || !d.song_items.length) return '';
+      const rows = d.song_items.map(item => `
+        <tr>
+          <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);white-space:nowrap"><strong>${item.name}</strong></td>
+          <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text-dim)">${item.effect||(SONG_ITEMS_CATALOG.find(c=>c.no===item.no)?.effect)||''}</td>
+          <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem">${item.memo||''}</td>
+        </tr>`).join('');
+      return `<div class="form-section"><h4>歌術アイテム（${d.song_items.length}個）</h4>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:400px">
+            <thead><tr>
+              <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left;white-space:nowrap">アイテム名</th>
+              <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果</th>
+              <th style="padding:.25rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">メモ</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div></div>`;
     })();
 
     return `
@@ -630,6 +673,10 @@ const App = {
               <strong style="color:var(--accent2)">${g}消耗ゲージ</strong>
               <span style="font-size:.82rem;margin-left:.5rem;color:var(--text-dim)">消耗値:${gauges[g]?.cost??9} / ゲージ数:${gauges[g]?.boxes??3}</span>
             </div>`).join('')}
+            ${d.song_cost_mod ? `<div style="margin-bottom:.5rem;padding:.4rem;background:var(--surface);border:1px solid var(--accent2);border-radius:4px">
+              <strong style="color:var(--accent2)">歌術使用時の消耗値補正</strong>
+              <span style="font-size:.82rem;margin-left:.5rem;color:var(--text-dim)">${d.song_cost_mod>=0?'+':''}${d.song_cost_mod}（気力消耗値${gauges['気力']?.cost??9} → 歌術使用時${(gauges['気力']?.cost??9)+d.song_cost_mod}）</span>
+            </div>` : ''}
             <div style="margin-bottom:.5rem;padding:.4rem;background:var(--surface);border:1px solid var(--singer);border-radius:4px">
               <strong style="color:var(--singer)">絆ゲインゲージ</strong>
               <span style="font-size:.82rem;margin-left:.5rem;color:var(--text-dim)">獲得値:${gauges['絆ゲイン']?.gain??11} / ゲージ数:${gauges['絆ゲイン']?.boxes??3}</span>
@@ -651,6 +698,8 @@ const App = {
       ${singerAbilitiesHTML}
       ${singerSongsHTML}
       ${combatHTML}
+      ${songItemsHTML}
+      ${d.equipment ? `<div class="form-section"><h4>一般アイテム</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.equipment}</pre></div>` : ''}
       ${d.ng_actions ? `<div class="form-section"><h4>NG行動</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.ng_actions}</pre></div>` : ''}
       ${d.notes ? `<div class="form-section"><h4>メモ</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.notes}</pre></div>` : ''}`;
   },
@@ -786,6 +835,9 @@ const App = {
       const abilitiesMemo = (d.hero_abilities && d.hero_abilities.length)
         ? d.hero_abilities.map(a => `${a.no}.${a.name}${a.memo ? '（'+a.memo+'）' : ''}`).join('\n')
         : (d.abilities_memo || '');
+      const songItemsMemo = (d.song_items && d.song_items.length)
+        ? d.song_items.map(it => `${it.name}${it.memo ? '（'+it.memo+'）' : ''}`).join('\n')
+        : '';
       ccfolia = {
         kind: 'character',
         data: {
@@ -794,13 +846,14 @@ const App = {
             `【英雄】Lv${d.level||1} ${d.gender||''} ${d.nationality||''} ${d.job||''}`,
             `通常HP:${d.hp?.normal||0} / 負傷HP:${d.hp?.injured||0} / MP:${d.hp?.mp||0}`,
             `防御値:${d.modifiers?.defense||0}`,
-            armorsMemo    ? `\n[防具]\n${armorsMemo}`       : '',
-            abilitiesMemo ? `\n[英雄能力]\n${abilitiesMemo}` : '',
-            d.equipment   ? `\n[所持品]\n${d.equipment}`     : '',
-            d.notes       ? `\n[メモ]\n${d.notes}`           : '',
+            armorsMemo    ? `\n[防具]\n${armorsMemo}`         : '',
+            abilitiesMemo ? `\n[英雄能力]\n${abilitiesMemo}`   : '',
+            songItemsMemo ? `\n[歌術アイテム]\n${songItemsMemo}` : '',
+            d.equipment   ? `\n[一般アイテム]\n${d.equipment}`  : '',
+            d.notes       ? `\n[メモ]\n${d.notes}`             : '',
           ].filter(Boolean).join('\n'),
           initiative: (d.abilities?.敏捷||10) - 10,
-          commands: commands.map(c => `${c.label}\n${c.value}`).join('\n\n'),
+          commands: commands.map(c => c.value).join('\n'),
           status: [
             { label: '通常HP', value: d.hp?.normal||0, max: d.hp?.normal||0 },
             { label: '負傷HP', value: d.hp?.injured||0, max: d.hp?.injured||0 },
@@ -827,6 +880,10 @@ const App = {
       const armorsMemo = (d.armors && d.armors.length)
         ? d.armors.map(a => `${a.name}：防御値${a.defense||0}${a.evasionPenalty ? ` 回避ペナルティ-${a.evasionPenalty}` : ''}`).join('\n')
         : '';
+      // 歌術アイテム情報
+      const songItemsMemo = (d.song_items && d.song_items.length)
+        ? d.song_items.map(it => `${it.name}${it.memo ? '（'+it.memo+'）' : ''}`).join('\n')
+        : '';
       ccfolia = {
         kind: 'character',
         data: {
@@ -835,22 +892,30 @@ const App = {
             `【歌姫】Lv${d.level||1} 絆Lv${d.bond_level||1} 階位${d.rank||1}`,
             `通常HP:${d.hp?.normal||0} / 負傷HP:${d.hp?.injured||0}`,
             `防御値:${d.modifiers?.defense||0}`,
-            abilitiesMemo ? `\n[歌姫能力]\n${abilitiesMemo}` : '',
-            songsMemo     ? `\n[歌術]\n${songsMemo}`         : '',
-            weaponsMemo   ? `\n[武器]\n${weaponsMemo}`       : '',
-            armorsMemo    ? `\n[防具]\n${armorsMemo}`        : '',
-            d.equipment   ? `\n[その他装備]\n${d.equipment}` : '',
-            d.ng_actions  ? `\n[NG行動]\n${d.ng_actions}`    : '',
+            abilitiesMemo ? `\n[歌姫能力]\n${abilitiesMemo}`     : '',
+            songsMemo     ? `\n[歌術]\n${songsMemo}`             : '',
+            weaponsMemo   ? `\n[武器]\n${weaponsMemo}`           : '',
+            armorsMemo    ? `\n[防具]\n${armorsMemo}`            : '',
+            songItemsMemo ? `\n[歌術アイテム]\n${songItemsMemo}` : '',
+            d.equipment   ? `\n[一般アイテム]\n${d.equipment}`    : '',
+            d.ng_actions  ? `\n[NG行動]\n${d.ng_actions}`        : '',
           ].filter(Boolean).join('\n'),
-          commands: commands.map(c => `${c.label}\n${c.value}`).join('\n\n'),
+          commands: commands.map(c => c.value).join('\n'),
           status: [
             { label: '通常HP',     value: d.hp?.normal||0,                  max: d.hp?.normal||0 },
+            { label: '負傷HP',     value: d.hp?.injured||0,                 max: d.hp?.injured||0 },
             { label: '肉体ゲージ', value: d.gauges?.肉体?.boxes??3,          max: d.gauges?.肉体?.boxes??3 },
             { label: '気力ゲージ', value: d.gauges?.気力?.boxes??3,          max: d.gauges?.気力?.boxes??3 },
             { label: '絆消耗ゲージ', value: d.gauges?.絆?.boxes??3,          max: d.gauges?.絆?.boxes??3 },
             { label: '絆ゲインゲージ', value: d.gauges?.['絆ゲイン']?.boxes??3, max: d.gauges?.['絆ゲイン']?.boxes??3 },
           ],
-          params: ABILITY_NAMES.map(n => ({ label: n, value: String(d.abilities?.[n]||10) })),
+          params: [
+            ...ABILITY_NAMES.map(n => ({ label: n, value: String(d.abilities?.[n]||10) })),
+            { label: '肉体消耗値', value: String(d.gauges?.肉体?.cost ?? 9) },
+            { label: '気力消耗値', value: String(d.gauges?.気力?.cost ?? 9) },
+            { label: '絆消耗値',   value: String(d.gauges?.絆?.cost ?? 9) },
+            { label: '絆獲得値',   value: String(d.gauges?.['絆ゲイン']?.gain ?? 11) },
+          ],
         }
       };
     } else {
@@ -866,7 +931,7 @@ const App = {
             `防御値:${d.defense||0} ダメージ修正:${d.armor_damage_mod||0}`,
             d.special_rules ? `\n[特殊ルール]\n${d.special_rules}` : '',
           ].filter(Boolean).join('\n'),
-          commands: commands.map(c => `${c.label}\n${c.value}`).join('\n\n'),
+          commands: commands.map(c => c.value).join('\n'),
           status: [
             { label: '小破HP', value: d.hp?.small||0, max: d.hp?.small||0 },
             { label: '中破HP', value: d.hp?.medium||0, max: d.hp?.medium||0 },

@@ -71,7 +71,8 @@ const HeroForm = {
       weapons: [],
       armors: [], // [{name, defense, evasionPenalty}] 防具・盾の個別管理
       hero_abilities: [], // [{no, name, memo}] 個別管理
-      equipment: '', // 旧データ互換用（武器・防具以外の所持品はここに残す運用も可）
+      song_items: [], // 歌術アイテム [{no, name, effect, memo}] テーブル管理
+      equipment: '', // 一般アイテム・その他所持品（自由記述）
       notes: '',
       // 旧データ互換
       abilities_memo: '',
@@ -101,6 +102,31 @@ const HeroForm = {
     const td = tr?.querySelector('.hab-summary');
     const no = parseInt(sel.value);
     if (td) td.textContent = no ? (HERO_ABILITIES_CATALOG.find(c=>c.no===no)?.summary||'') : '';
+  },
+
+  // 歌術アイテム行HTML
+  _songItemRow(item, i) {
+    const noOpts = SONG_ITEMS_CATALOG.map(c =>
+      `<option value="${c.no}" ${item.no == c.no ? 'selected' : ''}>${c.no}. ${c.name}</option>`
+    ).join('');
+    return `<tr data-sii="${i}">
+      <td style="min-width:200px">
+        <select name="hsi_no" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.25rem .4rem;border-radius:4px;font-size:.8rem" onchange="HeroForm._updateSongItemEffect(this)">
+          <option value="">-- 選択 --</option>
+          ${noOpts}
+        </select>
+      </td>
+      <td style="min-width:220px;font-size:.75rem;color:var(--text-dim)" class="hsi-effect">${item.no ? (SONG_ITEMS_CATALOG.find(c=>c.no==item.no)?.effect||'') : ''}</td>
+      <td style="min-width:160px"><input name="hsi_memo" value="${(item.memo||'').replace(/"/g,'&quot;')}" placeholder="メモ（個数・入手経緯など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeSongItem(${i})">×</button></td>
+    </tr>`;
+  },
+
+  _updateSongItemEffect(sel) {
+    const tr = sel.closest('tr');
+    const td = tr?.querySelector('.hsi-effect');
+    const no = parseInt(sel.value);
+    if (td) td.textContent = no ? (SONG_ITEMS_CATALOG.find(c=>c.no===no)?.effect||'') : '';
   },
 
   renderForm(data = null) {
@@ -153,6 +179,11 @@ const HeroForm = {
     const legacyMemo = (!heroAbilities.length && d.abilities_memo)
       ? `<div class="alert alert-error" style="font-size:.8rem;margin-bottom:.5rem">⚠ 旧形式のテキストデータが存在します。以下を参照して上の表に移してください。<br><pre style="white-space:pre-wrap;margin-top:.3rem">${d.abilities_memo}</pre></div>`
       : '';
+
+    // 歌術アイテム行
+    const songItems = d.song_items && d.song_items.length > 0 ? d.song_items : [];
+    const songItemRows = songItems.map((item, i) => this._songItemRow(item, i)).join('');
+
 
     return `
       <form id="hero-form" onsubmit="return false">
@@ -295,8 +326,26 @@ const HeroForm = {
         </div>
 
         <div class="form-section">
-          <h4>その他の所持品・メモ</h4>
-          <div class="form-group"><label>その他装備品（武器・防具以外）</label><textarea name="equipment" rows="2" placeholder="冒険者セット・歌術アイテムなど...">${d.equipment || ''}</textarea></div>
+          <h4>歌術アイテム</h4>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+              <thead>
+                <tr>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">アイテム名</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">メモ</th>
+                  <th style="width:36px"></th>
+                </tr>
+              </thead>
+              <tbody id="hero-song-item-tbody">${songItemRows}</tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" style="margin-top:.5rem" onclick="HeroForm.addSongItem()">＋ 歌術アイテムを追加</button>
+        </div>
+
+        <div class="form-section">
+          <h4>一般アイテム・メモ</h4>
+          <div class="form-group"><label>一般アイテム（歌術アイテム以外の所持品）</label><textarea name="equipment" rows="3" placeholder="冒険者セット・現世武器など、改行して複数記入できます...">${d.equipment || ''}</textarea></div>
           <div class="form-group"><label>メモ</label><textarea name="notes" rows="3" placeholder="自由メモ...">${d.notes || ''}</textarea></div>
         </div>
       </form>`;
@@ -351,6 +400,15 @@ const HeroForm = {
       hero_abilities.push({ no, name: catalog?.name || '', memo });
     }
 
+    const song_items = [];
+    for (const row of f.querySelectorAll('#hero-song-item-tbody tr')) {
+      const no   = parseInt(row.querySelector('[name=hsi_no]')?.value) || 0;
+      const memo = row.querySelector('[name=hsi_memo]')?.value?.trim() || '';
+      if (!no) continue;
+      const catalog = SONG_ITEMS_CATALOG.find(c => c.no === no);
+      song_items.push({ no, name: catalog?.name || '', effect: catalog?.effect || '', memo });
+    }
+
     return {
       name: g('name'), nationality: g('nationality'), job: g('job'),
       age: g('age'), gender: g('gender'), level: gi('level'),
@@ -370,6 +428,7 @@ const HeroForm = {
       weapons,
       armors,
       hero_abilities,
+      song_items,
       equipment: g('equipment'),
       notes:     g('notes'),
       abilities_memo: '', // 旧フィールドはクリア
@@ -388,6 +447,21 @@ const HeroForm = {
 
   removeAbility(i) {
     const rows = document.querySelectorAll('#hero-ability-tbody tr');
+    if (rows[i]) rows[i].remove();
+  },
+
+  addSongItem() {
+    const tbody = document.getElementById('hero-song-item-tbody');
+    if (!tbody) return;
+    const i = tbody.querySelectorAll('tr').length;
+    const tr = document.createElement('tr');
+    tr.dataset.sii = i;
+    tr.innerHTML = this._songItemRow({ no: '', memo: '' }, i);
+    tbody.appendChild(tr);
+  },
+
+  removeSongItem(i) {
+    const rows = document.querySelectorAll('#hero-song-item-tbody tr');
     if (rows[i]) rows[i].remove();
   },
 

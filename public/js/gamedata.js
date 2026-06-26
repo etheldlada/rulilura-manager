@@ -157,27 +157,22 @@ function buildSingerCcfoliaCommands(singerData) {
   const d = singerData;
   const cmds = [];
 
-  // 消耗チェック（肉体・気力・絆の3消耗ゲージ）
+  // 消耗チェック（肉体・気力・絆消耗ゲージ）：パラメータ「○○消耗値」を参照する1行コマンド
   for (const gauge of ['肉体', '気力', '絆']) {
-    const val = d.gauges?.[gauge]?.cost || 9;
     cmds.push({
-      label: `${gauge}消耗チェック`,
-      value: `2D10<=${val} [${gauge}消耗チェック 消耗値:${val}]`
+      value: `2D10<={${gauge}消耗値} [${gauge}消耗チェック 消耗値:{${gauge}消耗値}]`
     });
   }
 
-  // 絆獲得チェック（絆ゲインゲージ：消耗ゲージとは別の独立した判定）
-  const gainVal = d.gauges?.['絆ゲイン']?.gain || 11;
+  // 絆獲得チェック（絆ゲインゲージ：消耗チェックとは別の独立した判定）：パラメータ「絆獲得値」を参照
   cmds.push({
-    label: '絆獲得チェック',
-    value: `2D10<=${gainVal} [絆獲得チェック 獲得値:${gainVal}]`
+    value: `2D10<={絆獲得値} [絆獲得チェック 獲得値:{絆獲得値}]`
   });
 
   // 歌姫スキルチェック
   for (const [name, val] of Object.entries(d.skills || {})) {
     if (val > 0) {
       cmds.push({
-        label: `${name}`,
         value: `1D100<=${50 + val} [${name} スキル${val}]`
       });
     }
@@ -186,18 +181,16 @@ function buildSingerCcfoliaCommands(singerData) {
   // 特殊起動チェック
   const spiritVal = d.abilities?.['精神力'] || 10;
   cmds.push({
-    label: '特殊起動チェック',
     value: `2D10<=${spiritVal} [特殊起動【精神力】チェック]`
   });
 
-  // 歌術コマンド（singer_songs配列から生成）
-  for (const s of d.singer_songs || []) {
-    if (!s.name) continue;
-    cmds.push({
-      label: `歌術:${s.name}（R${s.rank||1}）`,
-      value: `[${s.name} R${s.rank||1}${s.memo ? ' / '+s.memo : ''}]`
-    });
-  }
+  // 歌術判定（汎用）：歌術を使う時に共通で使うコマンド。
+  // パラメータ「気力消耗値」に、シートで記入した補正値（歌姫能力・歌術アイテムの効果分）を自動で加算する。
+  const songCostMod = parseInt(d.song_cost_mod) || 0;
+  const songCostModSign = songCostMod >= 0 ? `+${songCostMod}` : `${songCostMod}`;
+  cmds.push({
+    value: `2D10<={気力消耗値}${songCostModSign} [歌術判定 気力消耗チェック 消耗値:{気力消耗値}${songCostModSign}（歌姫能力・歌術アイテム補正込み）]`
+  });
 
   // 戦闘系歌姫：武器攻撃コマンド（weapons配列がある場合のみ）
   const meleeMod  = d.modifiers?.melee  || 0;
@@ -214,7 +207,6 @@ function buildSingerCcfoliaCommands(singerData) {
     const hitSign   = combatMod >= 0 ? `+${combatMod}` : `${combatMod}`;
 
     cmds.push({
-      label: `攻撃:${w.name}`,
       value: `1D100<=${finalHit} [${w.name}命中 基本${baseHit}${hitSign}(${modLabel})]`
     });
 
@@ -227,7 +219,6 @@ function buildSingerCcfoliaCommands(singerData) {
         dmgNote = `${w.name} 筋力修正${strSign}込み`;
       }
       cmds.push({
-        label: `ダメージ:${w.name}`,
         value: `${dmgExpr} [${dmgNote}]`
       });
     }

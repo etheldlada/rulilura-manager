@@ -221,11 +221,13 @@ const SingerForm = {
         '絆':   { cost: 9, boxes: 3 },        // 絆消耗ゲージ：消耗値のみ
         '絆ゲイン': { gain: 11, boxes: 3 },   // 絆ゲインゲージ：獲得値のみ（絆消耗とは別の独立したゲージ）
       },
+      song_cost_mod: 0, // 歌術使用時の気力消耗値に対する補正値（歌姫能力・歌術アイテムの効果分）。ユーザーが手動で記入する枠
       singer_abilities: [], // [{no, name, memo}]
       singer_songs:     [], // [{no, name, rank, memo}]
       weapons: [],          // 戦闘系歌姫用武器
       armors:  [],          // 戦闘系歌姫用防具 [{name, defense, evasionPenalty}]
-      equipment: '',        // 旧データ互換用（武器・防具以外の所持品）
+      song_items: [],        // 歌術アイテム [{no, name, effect, memo}] テーブル管理
+      equipment: '',        // 一般アイテム・その他所持品（自由記述）
       ng_actions: '',
       notes: '',
       // 旧互換フィールド
@@ -257,6 +259,31 @@ const SingerForm = {
     const td = tr?.querySelector('.sab-summary');
     const no = parseInt(sel.value);
     if (td) td.textContent = no ? (SINGER_ABILITIES_CATALOG.find(c=>c.no===no)?.summary||'') : '';
+  },
+
+  // 歌術アイテム行HTML
+  _songItemRow(item, i) {
+    const noOpts = SONG_ITEMS_CATALOG.map(c =>
+      `<option value="${c.no}" ${item.no == c.no ? 'selected' : ''}>${c.no}. ${c.name}</option>`
+    ).join('');
+    return `<tr data-ssii="${i}">
+      <td style="min-width:200px">
+        <select name="ssi_no" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.25rem .4rem;border-radius:4px;font-size:.8rem" onchange="SingerForm._updateSongItemEffect(this)">
+          <option value="">-- 選択 --</option>
+          ${noOpts}
+        </select>
+      </td>
+      <td style="min-width:220px;font-size:.75rem;color:var(--text-dim)" class="ssi-effect">${item.no ? (SONG_ITEMS_CATALOG.find(c=>c.no==item.no)?.effect||'') : ''}</td>
+      <td style="min-width:160px"><input name="ssi_memo" value="${(item.memo||'').replace(/"/g,'&quot;')}" placeholder="メモ（個数・入手経緯など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeSongItem(${i})">×</button></td>
+    </tr>`;
+  },
+
+  _updateSongItemEffect(sel) {
+    const tr = sel.closest('tr');
+    const td = tr?.querySelector('.ssi-effect');
+    const no = parseInt(sel.value);
+    if (td) td.textContent = no ? (SONG_ITEMS_CATALOG.find(c=>c.no===no)?.effect||'') : '';
   },
 
   // 歌術行HTML
@@ -336,6 +363,10 @@ const SingerForm = {
     const legacySongMemo = (!d.singer_songs.length && d.songs)
       ? `<div class="alert alert-error" style="font-size:.8rem;margin-bottom:.5rem">⚠ 旧形式のテキストデータが存在します。以下を参照して上の表に移してください。<br><pre style="white-space:pre-wrap;margin-top:.3rem">${d.songs}</pre></div>`
       : '';
+
+    // 歌術アイテム行
+    const songItems = d.song_items && d.song_items.length > 0 ? d.song_items : [];
+    const songItemRows = songItems.map((item, i) => this._songItemRow(item, i)).join('');
 
     // 武器行（戦闘系歌姫用）
     const weaponRows = d.weapons.map((w, i) => `
@@ -438,6 +469,12 @@ const SingerForm = {
               <div class="form-group"><label>ゲージ数（ダメージボックス）</label>
                 <input type="number" min="1" max="10" name="gauge_${g}_boxes" value="${gauges[g]?.boxes ?? 3}">
               </div>
+              ${g==='気力' ? `
+              <div class="form-group">
+                <label>歌術使用時の消耗値補正</label>
+                <input type="number" name="song_cost_mod" value="${d.song_cost_mod ?? 0}" placeholder="例：+1">
+                <small style="color:var(--text-dim);display:block;margin-top:.2rem">取得済みの歌姫能力・所持する歌術アイテムによる気力消耗値への補正の合計をここに記入してください（基本消耗値とは別に加算されます）。</small>
+              </div>` : ''}
             </div>`).join('')}
             <div style="background:var(--surface);border:1px solid var(--singer);border-radius:var(--radius);padding:.75rem">
               <strong style="color:var(--singer)">絆ゲインゲージ</strong>
@@ -521,10 +558,31 @@ const SingerForm = {
           <button type="button" class="btn btn-sm btn-secondary" style="margin-top:.5rem" onclick="SingerForm.addArmor()">＋ 防具を追加</button>
           <div style="font-size:.8rem;color:var(--accent2);margin-top:.5rem">防御値合計: <strong id="singer-armor-defense-total">0</strong> ／ 回避ペナルティ合計: <strong id="singer-armor-penalty-total">0</strong></div>
           <small style="color:var(--text-dim);display:block;margin-top:.2rem">防御値・回避修正は上の「戦闘修正」欄に自動反映されます（盾は防御値1枚分のみ加算するルールのため、複数装備時は手動調整してください）。</small>
+        </div>
 
-          <div class="form-group" style="margin-top:.75rem">
-            <label>その他装備品（武器・防具以外）</label>
-            <textarea name="sequipment" rows="2" placeholder="例：歌術アイテムなど...">${d.equipment||''}</textarea>
+        <div class="form-section">
+          <h4>歌術アイテム</h4>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+              <thead>
+                <tr>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">アイテム名</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">メモ</th>
+                  <th style="width:36px"></th>
+                </tr>
+              </thead>
+              <tbody id="singer-song-item-tbody">${songItemRows}</tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" style="margin-top:.5rem" onclick="SingerForm.addSongItem()">＋ 歌術アイテムを追加</button>
+        </div>
+
+        <div class="form-section">
+          <h4>一般アイテム・メモ</h4>
+          <div class="form-group">
+            <label>一般アイテム（歌術アイテム以外の所持品）</label>
+            <textarea name="sequipment" rows="3" placeholder="冒険者セットなど、改行して複数記入できます...">${d.equipment||''}</textarea>
           </div>
         </div>
 
@@ -612,10 +670,21 @@ const SingerForm = {
       });
     }
 
+    // 歌術アイテム
+    const song_items = [];
+    for (const row of f.querySelectorAll('#singer-song-item-tbody tr')) {
+      const no   = parseInt(row.querySelector('[name=ssi_no]')?.value) || 0;
+      const memo = row.querySelector('[name=ssi_memo]')?.value?.trim() || '';
+      if (!no) continue;
+      const catalog = SONG_ITEMS_CATALOG.find(c => c.no === no);
+      song_items.push({ no, name: catalog?.name || '', effect: catalog?.effect || '', memo });
+    }
+
     return {
       name: g('sname'), origin: g('sorigin'), age: g('sage'),
       level: gi('slevel'), rank: gi('srank'), bond_level: gi('sbond'),
       abilities, skills, gauges,
+      song_cost_mod: gi('song_cost_mod'),
       hp: {
         normal:  gi('shp_normal'),  normalBonus:  gi('shp_normal_bonus'),
         injured: gi('shp_injured'), injuredBonus: gi('shp_injured_bonus'),
@@ -631,6 +700,7 @@ const SingerForm = {
       singer_songs,
       weapons,
       armors,
+      song_items,
       equipment:  g('sequipment'),
       ng_actions: g('sng_actions'),
       notes:      g('snotes'),
@@ -710,6 +780,21 @@ const SingerForm = {
   removeArmor(i) {
     const rows = document.querySelectorAll('#singer-armor-tbody tr');
     if (rows[i]) { rows[i].remove(); this._updateArmorTotals(); }
+  },
+
+  addSongItem() {
+    const tbody = document.getElementById('singer-song-item-tbody');
+    if (!tbody) return;
+    const i = tbody.querySelectorAll('tr').length;
+    const tr = document.createElement('tr');
+    tr.dataset.ssii = i;
+    tr.innerHTML = this._songItemRow({ no: '', memo: '' }, i);
+    tbody.appendChild(tr);
+  },
+
+  removeSongItem(i) {
+    const rows = document.querySelectorAll('#singer-song-item-tbody tr');
+    if (rows[i]) rows[i].remove();
   },
 
   // 防具行ごとの入力イベント付与
