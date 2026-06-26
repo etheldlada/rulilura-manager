@@ -6,9 +6,47 @@ const MOVE_TYPES = ['地上（通常）', '地上（不整地）', '地上（浮
 const WEAPON_TYPES = ['A', 'C', 'G', 'H', 'L', 'M', 'S'];
 
 const ArmorForm = {
+  // 搭乗ペアの選択肢（編集画面表示前にApp._renderEditPageから設定される）
+  _pilotHeroes: [],
+  _pilotSingers: [],
+  setPilotOptions(heroes, singers) {
+    this._pilotHeroes  = heroes  || [];
+    this._pilotSingers = singers || [];
+  },
+
+  // 「奏甲乗り」歌姫能力（カタログ番号26）を持つ歌姫のみを搭乗候補として返す
+  _eligibleSingers() {
+    return this._pilotSingers.filter(s =>
+      (s.data?.singer_abilities || []).some(a => a.no === 26)
+    );
+  },
+
+  // 指定した搭乗者（type:'hero'|'singer', id）のスキル一覧を返す
+  _skillsOf(type, id) {
+    if (!type || !id) return {};
+    if (type === 'hero') {
+      return this._pilotHeroes.find(h => h.id === id)?.data?.skills || {};
+    }
+    return this._eligibleSingers().find(s => s.id === id)?.data?.skills || {};
+  },
+
+  // renderForm内（保存データdから）武器スキルのoptions HTMLを生成
+  _skillOptionsHTMLForData(d, selectedSkill) {
+    const skills = this._skillsOf(d.pilot_type, d.pilot_id);
+    const names = Object.keys(skills);
+    let html = '<option value="">-- スキル --</option>';
+    html += names.map(sk => `<option value="${sk}" ${selectedSkill===sk?'selected':''}>${sk}</option>`).join('');
+    if (selectedSkill && !names.includes(selectedSkill)) {
+      html += `<option value="${selectedSkill}" selected>${selectedSkill}（手動）</option>`;
+    }
+    return html;
+  },
+
   defaults() {
     return {
       name: '', model: '', tl: 1, workshop: '',
+      pilot_type: '', // 搭乗者の種別（'hero' または 'singer'。空文字は未選択）
+      pilot_id: '',   // 搭乗者のID（自分の英雄一覧 or 奏甲乗り歌姫一覧から選択）
       hero_melee: 0, hero_ranged: 0, hero_evasion: 0, hero_resistance: 0, hero_recon: 0,
       armor_melee: 0, armor_ranged: 0, armor_evasion: 0, armor_resistance: 0, armor_recon: 0,
       armor_damage_mod: 0,
@@ -67,8 +105,12 @@ const ArmorForm = {
         </td>
         <td><input name="awbh"  value="${w.baseHit||''}"    placeholder="30"   style="width:50px" type="number" class="armor-weapon-calc"></td>
         <td><input name="awmod" value="${w.combatMod||0}"   style="width:50px" type="number" class="armor-weapon-mod" readonly title="射程「白」なら白兵修正、それ以外は射撃修正を自動入力"></td>
-        <td><input name="awsk"  value="${w.skill||''}"      placeholder="剣技"  style="width:60px"></td>
-        <td><input name="awskv" value="${w.skillVal||''}"   placeholder="20"   style="width:50px" type="number" class="armor-weapon-calc"></td>
+        <td>
+          <select name="awsk" class="armor-weapon-skill" style="width:90px">
+            ${this._skillOptionsHTMLForData(d, w.skill)}
+          </select>
+        </td>
+        <td><input name="awskv" value="${w.skillVal||''}"   placeholder="20"   style="width:50px" type="number" class="armor-weapon-skillval" readonly title="搭乗英雄のスキル値を自動取得"></td>
         <td style="background:rgba(233,69,96,.1);font-weight:bold;text-align:center;padding:.2rem .4rem;min-width:50px" class="final-hit">${(w.baseHit||0)+(w.combatMod||0)+(w.skillVal||0)||'-'}</td>
         <td><input name="awd"   value="${w.damage||''}"     placeholder="2D10+6" style="min-width:80px"></td>
         <td><input name="awct"  value="${w.count||'1'}"     style="width:40px"></td>
@@ -100,9 +142,29 @@ const ArmorForm = {
           </div>
         </div>
 
+        <!-- ===== 搭乗者 ===== -->
+        <div class="form-section">
+          <h4>搭乗者</h4>
+          <p style="font-size:.8rem;color:var(--text-dim);margin-bottom:.5rem">奏甲に搭乗するのは英雄、または「奏甲乗り」歌姫能力を持つ歌姫のいずれか一人です。選択すると「英雄の値」（戦闘修正）と搭載武器のスキル値が自動的に取得されます。</p>
+          <div class="form-group">
+            <label>搭乗者</label>
+            <select name="pilot_key" id="pilot-select">
+              <option value="">-- 選択しない（手動入力） --</option>
+              ${this._pilotHeroes.length ? `<optgroup label="英雄">
+                ${this._pilotHeroes.map(h => `<option value="hero:${h.id}" ${d.pilot_type==='hero'&&d.pilot_id===h.id?'selected':''}>${h.data?.name||'(無名)'}</option>`).join('')}
+              </optgroup>` : ''}
+              ${this._eligibleSingers().length ? `<optgroup label="歌姫（奏甲乗り）">
+                ${this._eligibleSingers().map(s => `<option value="singer:${s.id}" ${d.pilot_type==='singer'&&d.pilot_id===s.id?'selected':''}>${s.data?.name||'(無名)'}</option>`).join('')}
+              </optgroup>` : ''}
+            </select>
+            ${(this._pilotSingers.length && !this._eligibleSingers().length) ? `<small style="color:var(--text-dim);display:block;margin-top:.3rem">※歌姫一覧はありますが、「奏甲乗り」歌姫能力（26番）を持つ歌姫がいないため選択肢に表示されません。</small>` : ''}
+          </div>
+        </div>
+
         <!-- ===== 戦闘修正 ===== -->
         <div class="form-section">
           <h4>戦闘修正（英雄の値 + 奏甲修正 = 最終値）</h4>
+          <p id="pilot-auto-note" style="font-size:.78rem;color:var(--accent2);margin-bottom:.4rem;display:none">搭乗英雄の値を自動入力しました。英雄側を編集した場合は再選択すると最新値を取得できます。</p>
           <div style="overflow-x:auto">
             <table style="width:100%;border-collapse:collapse;font-size:.85rem">
               <thead><tr>
@@ -306,8 +368,14 @@ const ArmorForm = {
       });
     }
 
+    // 搭乗者選択（"hero:xxx" or "singer:xxx" 形式）をtype/idに分解する
+    const pilotKey = g('pilot_key');
+    const [pilotType, pilotId] = pilotKey ? pilotKey.split(':') : ['', ''];
+
     return {
       name: g('aname'), model: g('amodel'), tl: gi('atl'), workshop: g('aworkshop'),
+      pilot_type: pilotType || '',
+      pilot_id:   pilotId   || '',
       hero_melee:      gi('hero_melee'),
       hero_ranged:     gi('hero_ranged'),
       hero_evasion:    gi('hero_evasion'),
@@ -363,6 +431,26 @@ const ArmorForm = {
     document.querySelectorAll('#armor-weapon-tbody tr').forEach(tr => this._recalcWeaponCombatMod(tr));
   },
 
+  // 現在フォーム上で選択中の搭乗者（英雄 or 奏甲乗り歌姫）のスキル一覧（{name: value}）を返す
+  _currentPilotSkills() {
+    const key = document.getElementById('pilot-select')?.value;
+    if (!key) return {};
+    const [type, id] = key.split(':');
+    return this._skillsOf(type, id);
+  },
+
+  // スキルドロップダウンのoptions HTMLを生成（現在の選択値を保持）
+  _skillOptionsHTML(selectedSkill) {
+    const skills = this._currentPilotSkills();
+    const names = Object.keys(skills);
+    let html = '<option value="">-- スキル --</option>';
+    html += names.map(sk => `<option value="${sk}" ${selectedSkill===sk?'selected':''}>${sk}</option>`).join('');
+    if (selectedSkill && !names.includes(selectedSkill)) {
+      html += `<option value="${selectedSkill}" selected>${selectedSkill}（手動）</option>`;
+    }
+    return html;
+  },
+
   addWeapon() {
     const tbody = document.getElementById('armor-weapon-tbody');
     if (!tbody) return;
@@ -382,8 +470,8 @@ const ArmorForm = {
       </td>
       <td><input name="awbh"  placeholder="30"   style="width:50px" type="number" class="armor-weapon-calc"></td>
       <td><input name="awmod" value="0" style="width:50px" type="number" class="armor-weapon-mod" readonly title="射程「白」なら白兵修正、それ以外は射撃修正を自動入力"></td>
-      <td><input name="awsk"  placeholder="剣技"  style="width:60px"></td>
-      <td><input name="awskv" placeholder="20"   style="width:50px" type="number" class="armor-weapon-calc"></td>
+      <td><select name="awsk" class="armor-weapon-skill" style="width:90px">${this._skillOptionsHTML('')}</select></td>
+      <td><input name="awskv" value="0" style="width:50px" type="number" class="armor-weapon-skillval" readonly title="搭乗英雄のスキル値を自動取得"></td>
       <td style="background:rgba(233,69,96,.1);font-weight:bold;text-align:center;padding:.2rem .4rem;min-width:50px" class="final-hit">-</td>
       <td><input name="awd"  placeholder="2D10+6" style="min-width:80px"></td>
       <td><input name="awct" value="1"  style="width:40px"></td>
@@ -460,6 +548,37 @@ const ArmorForm = {
     tr.querySelectorAll('.armor-weapon-range').forEach(el => {
       el.addEventListener('change', () => this._recalcWeaponCombatMod(tr));
     });
+    // 武器スキル選択時に搭乗英雄のスキル値を自動取得する
+    tr.querySelectorAll('.armor-weapon-skill').forEach(el => {
+      el.addEventListener('change', () => this._recalcWeaponSkillVal(tr));
+    });
+  },
+
+  // 武器1行分のスキル値を、選択中のスキル名と搭乗英雄のスキルデータから自動取得してセットする
+  _recalcWeaponSkillVal(tr) {
+    if (!tr) return;
+    const skillName = tr.querySelector('[name=awsk]')?.value || '';
+    const skills = this._currentPilotSkills();
+    const val = skillName ? (skills[skillName] || 0) : 0;
+
+    const skvInput = tr.querySelector('[name=awskv]');
+    if (skvInput) skvInput.value = val;
+
+    const bh  = parseInt(tr.querySelector('[name=awbh]')?.value)  || 0;
+    const mod = parseInt(tr.querySelector('[name=awmod]')?.value) || 0;
+    const finalTd = tr.querySelector('.final-hit');
+    if (finalTd) finalTd.textContent = bh + mod + val;
+  },
+
+  // 全武器行のスキル選択肢を、現在選択中の搭乗英雄のスキル一覧で再構築する
+  _refreshAllWeaponSkillOptions() {
+    document.querySelectorAll('#armor-weapon-tbody tr').forEach(tr => {
+      const sel = tr.querySelector('[name=awsk]');
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = this._skillOptionsHTML(current);
+      this._recalcWeaponSkillVal(tr);
+    });
   },
 
   _updateLoadDisplay() {
@@ -502,6 +621,51 @@ const ArmorForm = {
     document.querySelectorAll('#armor-weapon-tbody tr').forEach(tr => this._attachRowCalc(tr));
     this._recalcAllWeaponCombatMod();
     this._updateLoadDisplay();
+
+    // 搭乗者を選択した時：「英雄の値」欄に自動入力し、武器スキルの選択肢・値も更新する
+    document.getElementById('pilot-select')?.addEventListener('change', (e) => {
+      const key = e.target.value;
+      const note = document.getElementById('pilot-auto-note');
+      let pilotData = null;
+
+      if (key) {
+        const [type, id] = key.split(':');
+        if (type === 'hero') {
+          pilotData = this._pilotHeroes.find(h => h.id === id)?.data || null;
+        } else if (type === 'singer') {
+          pilotData = this._eligibleSingers().find(s => s.id === id)?.data || null;
+        }
+      }
+
+      if (pilotData) {
+        const mods = pilotData.modifiers || {};
+        const setVal = (name, v) => { const el = document.querySelector(`[name="${name}"]`); if (el) el.value = v; };
+        setVal('hero_melee',      mods.melee      || 0);
+        setVal('hero_ranged',     mods.ranged     || 0);
+        setVal('hero_evasion',    mods.evasion    || 0);
+        setVal('hero_resistance', mods.resistance || 0);
+        setVal('hero_recon',      pilotData.skills?.['偵察'] || 0);
+
+        // 合計（最終値）表示も再計算
+        ['melee','ranged','evasion','resistance','recon'].forEach(key => {
+          const td = document.getElementById(`final_${key}`);
+          const hEl = document.querySelector(`[name="hero_${key}"]`);
+          const aEl = document.querySelector(`[name="armor_${key}"]`);
+          if (td) td.textContent = (parseInt(hEl?.value)||0) + (parseInt(aEl?.value)||0);
+        });
+
+        if (note) note.style.display = 'block';
+      } else {
+        if (note) note.style.display = 'none';
+      }
+
+      // 戦闘修正・スキル選択肢を再計算
+      this._recalcAllWeaponCombatMod();
+      this._refreshAllWeaponSkillOptions();
+    });
+
+    // 初回ロード時：搭乗者が既に選択されている場合はスキル選択肢を構築しておく
+    this._refreshAllWeaponSkillOptions();
   },
 
   attachWeaponCalc() { /* 互換用・attachAutoCalc内で処理 */ },

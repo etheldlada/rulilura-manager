@@ -254,6 +254,19 @@ const App = {
     if (['mypage','public'].includes(this.currentPage)) {
       this._prevPage = this.currentPage;
     }
+
+    // 奏甲の場合、搭乗者（英雄 または 奏甲乗り歌姫のいずれか一人）の名前を表示用に取得する
+    if (type === 'armor') {
+      const pilotType = item.data?.pilot_type || (item.hero_id ? 'hero' : item.singer_id ? 'singer' : '');
+      const pilotId   = item.data?.pilot_id   || item.hero_id || item.singer_id || '';
+      if (pilotType && pilotId && Auth.isLoggedIn) {
+        const endpoint2 = pilotType === 'hero' ? `/api/heroes/${pilotId}` : `/api/singers/${pilotId}`;
+        const p = await API.get(endpoint2).catch(() => null);
+        item._pilotType = pilotType;
+        item._pilotName = p?.data?.name || null;
+      }
+    }
+
     this._detailItem = item;
     this._detailType = type;
     this.currentPage = 'detail';
@@ -293,7 +306,7 @@ const App = {
   },
 
   // ===== 作成ページへ遷移 =====
-  openCreateModal(type) {
+  async openCreateModal(type) {
     if (['mypage','public'].includes(this.currentPage)) {
       this._prevPage = this.currentPage;
     }
@@ -301,7 +314,7 @@ const App = {
     this.editingType = type;
     this.currentPage = 'edit';
     this.render();
-    this._renderEditPage(type, null, null);
+    await this._renderEditPage(type, null, null);
     window.scrollTo(0, 0);
   },
 
@@ -319,19 +332,31 @@ const App = {
     this.editingType = type;
     this.currentPage = 'edit';
     this.render();
-    this._renderEditPage(type, id, item.data);
+    await this._renderEditPage(type, id, item.data);
     window.scrollTo(0, 0);
   },
 
   // 後方互換（カードの編集ボタン）
   async openEditModal(type, id) { return this.gotoEdit(type, id); },
 
-  _renderEditPage(type, id, data) {
+  async _renderEditPage(type, id, data) {
     const el = document.getElementById('edit-content');
     if (!el) return;
     const label = type==='hero'?'英雄':type==='singer'?'歌姫':'奏甲';
     const isNew = !id;
-    const backPage = this._prevPage || 'mypage';
+
+    // 奏甲フォームは搭乗ペア選択のため英雄・歌姫一覧を先に取得しておく
+    if (type === 'armor' && Auth.isLoggedIn) {
+      try {
+        const [heroes, singers] = await Promise.all([
+          API.get('/api/heroes'),
+          API.get('/api/singers'),
+        ]);
+        ArmorForm.setPilotOptions(heroes, singers);
+      } catch {
+        ArmorForm.setPilotOptions([], []);
+      }
+    }
 
     const form = type==='hero'   ? HeroForm.renderForm(data)
                : type==='singer' ? SingerForm.renderForm(data)
@@ -371,10 +396,17 @@ const App = {
     if (!data || !data.name) { alert('名前は必須です'); return; }
 
     const endpoint = `/api/${type==='hero'?'heroes':type==='singer'?'singers':'armors'}`;
+    const body = { data };
+    // 奏甲の場合、搭乗者選択をDBのリレーションカラム（hero_id/singer_id）にも反映する
+    // 搭乗者は英雄か歌姫のどちらか一方のみのため、選ばれなかった側は必ずnullにする
+    if (type === 'armor') {
+      body.hero_id   = data.pilot_type === 'hero'   ? data.pilot_id : null;
+      body.singer_id = data.pilot_type === 'singer' ? data.pilot_id : null;
+    }
     try {
       let saved;
-      if (id) saved = await API.put(`${endpoint}/${id}`, { data });
-      else     saved = await API.post(endpoint, { data });
+      if (id) saved = await API.put(`${endpoint}/${id}`, body);
+      else     saved = await API.post(endpoint, body);
       // 保存後は詳細ページへ遷移
       await this.gotoDetail(type, saved.id);
     } catch(e) {
@@ -631,6 +663,13 @@ const App = {
     const finalResistance = (d.hero_resistance||0)+(d.armor_resistance||0);
     const finalRecon      = (d.hero_recon||0)+(d.armor_recon||0);
 
+    const pilotHtml = item?._pilotName ? `
+      <div class="form-section"><h4>搭乗者</h4>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <span class="stat-chip">${item._pilotType==='hero'?'英雄':'歌姫'}: ${item._pilotName}</span>
+        </div>
+      </div>` : '';
+
     const advSection = (() => {
       // 上級ルールデータが何もない場合は表示しない
       const hasAdv = adv.move_normal || adv.move_type || adv.max_load
@@ -684,6 +723,7 @@ const App = {
           ${[['名称',d.name],['型式',d.model||'-'],['TL',d.tl||0],['工房',d.workshop||'-'],['防御値',d.defense||0]].map(([k,v])=>`<div style="background:var(--surface);padding:.4rem;border-radius:4px"><span style="color:var(--text-dim);font-size:.75rem;display:block">${k}</span><strong>${v}</strong></div>`).join('')}
         </div>
       </div>
+      ${pilotHtml}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
         <div class="form-section"><h4>奏甲HP</h4>
           <div class="hp-row">
