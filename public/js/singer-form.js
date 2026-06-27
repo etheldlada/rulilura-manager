@@ -78,7 +78,8 @@ const SONGS_CATALOG = [
     }},
   { no:65, name:'個人戦闘補助の歌「早足のワルツ」', maxRank:4,
     effects: {
-      1: '気力×1回消耗。A:命中値+10 または B:HP+20（1戦闘中）',
+      '1A': '気力×1回消耗。命中値+10（1戦闘中）',
+      '1B': '気力×1回消耗。HP+20（1戦闘中）',
       2: '上記＋回避修正+10',
       3: '上記＋防御値+[3+絆LV]',
       4: '上記の効果を可聴範囲内の全員に適用',
@@ -86,8 +87,10 @@ const SONGS_CATALOG = [
   { no:66, name:'奏甲戦闘補助の歌「歌楽器ソナタ」', maxRank:3,
     effects: {
       1: '気力×1回消耗。奏甲の白兵命中+10（1戦闘中）',
-      2: 'A:射撃命中+10 または B:回避修正+10',
-      3: 'A:防御値+3 または B:他の奏甲1機にも適用可',
+      '2A': '上記＋射撃命中+10',
+      '2B': '上記＋回避修正+10',
+      '3A': '防御値+3',
+      '3B': '可聴範囲内の他の奏甲1機にも上記効果を適用可',
     }},
   { no:67, name:'打撃増加の歌「剣と盾のノクターン」', maxRank:3,
     effects: {
@@ -104,8 +107,9 @@ const SONGS_CATALOG = [
     }},
   { no:69, name:'探知の歌「大地の調べ」', maxRank:5,
     effects: {
-      1: '気力×1回消耗。A:周囲照明 または B:幻糸の乱れ探知（30分）',
-      2: '歌術の存在を探知',
+      '1A': '気力×1回消耗。周囲を照明（30分）',
+      '1B': '気力×1回消耗。幻糸の乱れを探知（30分）',
+      2: '歌術・呪いの存在を探知',
       3: '1日前の足跡を探知',
       4: '透明な存在を探知',
       5: '1週間前の足跡を探知',
@@ -157,14 +161,16 @@ const SONGS_CATALOG = [
     effects: {
       1: '気力×1回消耗。歌姫自身に防御値5の結界（30分）',
       2: 'ペア英雄に防御値[絆LV+3]の結界',
-      3: 'A:指定対象に防御値5 または B:魔物への障壁',
-      4: '精霊を退散させる',
+      '3A': '指定した対象に防御値5の結界',
+      '3B': '周囲20m内の味方全員に魔物への障壁（防御値8）',
+      4: '精霊を退散させる（抵抗失敗で持続中退散）',
     }},
   { no:77, name:'転移とリンクの歌「金と銀と鋼の組曲」', maxRank:5,
     effects: {
       1: '気力×1回消耗。接触対象の居場所を感知（30分）',
       2: '2人でお互いに会話可（30分）',
-      3: 'A:持続1D10日 または B:念話',
+      '3A': 'ランク1の効果で持続が1D10日に延長',
+      '3B': '離れた対象と念話で会話可',
       4: '奏甲をテレポート',
       5: '恒久的な転移門を設置',
     }},
@@ -186,10 +192,11 @@ const SONGS_CATALOG = [
     }},
   { no:80, name:'精神攻撃の歌（禁忌）「宮廷道化のサンバ」', maxRank:4,
     effects: {
-      1: '気力×2回消耗。A:歌姫に気力消耗×2 または B:2D10MPダメージ（瞬間）',
-      2: '奇声効果1つをコピー',
-      3: '対象を気絶またはMP0に',
-      4: '可聴範囲内の全員に効果',
+      '1A': '気力×2回消耗。対象の歌姫に気力消耗チェック×2回（瞬間）',
+      '1B': '気力×2回消耗。対象に2D10MPダメージ（瞬間）',
+      2: '奇声効果1つをコピーして放つ',
+      3: '対象を気絶、またはMP（気力）を0に',
+      4: '上記1〜3の効果のいずれかを可聴範囲内の全員に',
     }},
   { no:81, name:'幻糸操作の歌（禁忌）「落ちて崩れし人形の前奏曲」', maxRank:6,
     effects: {
@@ -204,6 +211,15 @@ const SONGS_CATALOG = [
 
 // 戦闘系スキル（射程「白」判定用）
 const MELEE_SKILLS = new Set(['接近戦','剣技','斧／槌戦闘','槍／棒術','盾防御','特殊武器']);
+
+// 歌術ランクキーを昇順ソート（1A,1B,2,3A,3B… の順に並べる）
+function sortRanks(keys) {
+  return keys.slice().sort((a, b) => {
+    const na = parseInt(a), nb = parseInt(b);
+    if (na !== nb) return na - nb;
+    return String(a).localeCompare(String(b));
+  });
+}
 
 const SingerForm = {
   defaults() {
@@ -223,6 +239,7 @@ const SingerForm = {
       },
       song_cost_mod: 0, // 歌術使用時の気力消耗値に対する補正値（歌姫能力・歌術アイテムの効果分）。ユーザーが手動で記入する枠
       singer_abilities: [], // [{no, name, memo}]
+      hero_abilities:   [], // [{no, name, memo}] 英雄能力カタログから取得した能力
       singer_songs:     [], // [{no, name, rank, memo}]
       weapons: [],          // 戦闘系歌姫用武器
       armors:  [],          // 戦闘系歌姫用防具 [{name, defense, evasionPenalty}]
@@ -261,6 +278,31 @@ const SingerForm = {
     if (td) td.textContent = no ? (SINGER_ABILITIES_CATALOG.find(c=>c.no===no)?.summary||'') : '';
   },
 
+  // 英雄能力行HTML（歌姫取得分）
+  _heroAbilityRow(ab, i) {
+    const noOpts = HERO_ABILITIES_CATALOG.map(c =>
+      `<option value="${c.no}" ${ab.no == c.no ? 'selected' : ''}>${c.no}. ${c.name}</option>`
+    ).join('');
+    return `<tr data-sha="${i}">
+      <td style="min-width:220px">
+        <select name="sha_no" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.25rem .4rem;border-radius:4px;font-size:.8rem" onchange="SingerForm._updateHeroAbilitySummary(this)">
+          <option value="">-- 選択 --</option>
+          ${noOpts}
+        </select>
+      </td>
+      <td style="min-width:160px;font-size:.75rem;color:var(--text-dim)" class="sha-summary">${ab.no ? (HERO_ABILITIES_CATALOG.find(c=>c.no==ab.no)?.summary||'') : ''}</td>
+      <td style="min-width:200px"><input name="sha_memo" value="${(ab.memo||'').replace(/"/g,'&quot;')}" placeholder="習得時のメモ（適用対象など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeHeroAbility(${i})">×</button></td>
+    </tr>`;
+  },
+
+  _updateHeroAbilitySummary(sel) {
+    const tr = sel.closest('tr');
+    const td = tr?.querySelector('.sha-summary');
+    const no = parseInt(sel.value);
+    if (td) td.textContent = no ? (HERO_ABILITIES_CATALOG.find(c=>c.no===no)?.summary||'') : '';
+  },
+
   // 歌術アイテム行HTML
   _songItemRow(item, i) {
     const noOpts = SONG_ITEMS_CATALOG.map(c =>
@@ -291,11 +333,12 @@ const SingerForm = {
     const noOpts = SONGS_CATALOG.map(c =>
       `<option value="${c.no}" ${s.no == c.no ? 'selected' : ''}>${c.no}. ${c.name}</option>`
     ).join('');
-    const rankOpts = [1,2,3,4,5,6].map(r =>
+    // 歌術カタログのキーからランク選択肢を動的生成（存在するランクのみ）
+    const catalog  = SONGS_CATALOG.find(c => c.no == s.no);
+    const rankKeys = catalog ? sortRanks(Object.keys(catalog.effects)) : ['1'];
+    const rankOpts = rankKeys.map(r =>
       `<option value="${r}" ${s.rank == r ? 'selected' : ''}>R${r}</option>`
     ).join('');
-    // 効果テキストを取得
-    const catalog  = SONGS_CATALOG.find(c => c.no == s.no);
     const effectText = catalog && s.rank ? (catalog.effects[s.rank] || '') : '';
     return `<tr data-ssi="${i}">
       <td style="min-width:240px">
@@ -316,18 +359,34 @@ const SingerForm = {
   },
 
   _updateSongEffect(el) {
-    const tr  = el.closest('tr');
-    const td  = tr?.querySelector('.ssong-effect');
+    const tr = el.closest('tr');
+    const td = tr?.querySelector('.ssong-effect');
     if (!td) return;
-    const no   = parseInt(tr.querySelector('[name=ssong_no]')?.value)   || 0;
-    const rank = parseInt(tr.querySelector('[name=ssong_rank]')?.value) || 1;
+    const no      = parseInt(tr.querySelector('[name=ssong_no]')?.value) || 0;
     const catalog = SONGS_CATALOG.find(c => c.no === no);
-    td.textContent = catalog ? (catalog.effects[rank] || '') : '';
+
+    if (el.name === 'ssong_no') {
+      // 歌術選択変更時：ランク選択肢をカタログのキーで再構築
+      const rankSel = tr.querySelector('[name=ssong_rank]');
+      if (rankSel && catalog) {
+        const keys = sortRanks(Object.keys(catalog.effects));
+        rankSel.innerHTML = keys.map(r => `<option value="${r}">R${r}</option>`).join('');
+        td.textContent = catalog.effects[keys[0]] || '';
+      } else {
+        if (rankSel) rankSel.innerHTML = '<option value="1">R1</option>';
+        td.textContent = '';
+      }
+    } else {
+      // ランク変更時：効果テキストのみ更新
+      const rank = tr.querySelector('[name=ssong_rank]')?.value || '';
+      td.textContent = catalog ? (catalog.effects[rank] || '') : '';
+    }
   },
 
   renderForm(data = null) {
     const d = data ? { ...this.defaults(), ...data } : this.defaults();
     if (!d.singer_abilities) d.singer_abilities = [];
+    if (!d.hero_abilities)   d.hero_abilities   = [];
     if (!d.singer_songs)     d.singer_songs     = [];
     if (!d.weapons)          d.weapons          = [];
     if (!d.armors)           d.armors           = [];
@@ -353,6 +412,8 @@ const SingerForm = {
 
     // 歌姫能力行
     const abilityRows = d.singer_abilities.map((ab, i) => this._abilityRow(ab, i)).join('');
+    // 英雄能力行（歌姫取得分）
+    const heroAbilityRows = d.hero_abilities.map((ab, i) => this._heroAbilityRow(ab, i)).join('');
     // 旧データ互換
     const legacyAbilityMemo = (!d.singer_abilities.length && d.abilities_memo)
       ? `<div class="alert alert-error" style="font-size:.8rem;margin-bottom:.5rem">⚠ 旧形式のテキストデータが存在します。以下を参照して上の表に移してください。<br><pre style="white-space:pre-wrap;margin-top:.3rem">${d.abilities_memo}</pre></div>`
@@ -516,6 +577,25 @@ const SingerForm = {
         </div>
 
         <div class="form-section">
+          <h4>英雄能力（歌姫取得分）</h4>
+          <p style="font-size:.8rem;color:var(--text-dim);margin-bottom:.5rem">歌姫は6つの能力スロットのうち1つを英雄能力カタログから選択できます。</p>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+              <thead>
+                <tr>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">能力名</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果サマリー</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">メモ</th>
+                  <th style="width:36px"></th>
+                </tr>
+              </thead>
+              <tbody id="singer-hero-ability-tbody">${heroAbilityRows}</tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" style="margin-top:.5rem" onclick="SingerForm.addHeroAbility()">＋ 英雄能力を追加</button>
+        </div>
+
+        <div class="form-section">
           <h4>歌術</h4>
           ${legacySongMemo}
           <div style="overflow-x:auto">
@@ -633,11 +713,21 @@ const SingerForm = {
       singer_abilities.push({ no, name: catalog?.name || '', memo });
     }
 
+    // 英雄能力（歌姫取得分）
+    const hero_abilities = [];
+    for (const row of f.querySelectorAll('#singer-hero-ability-tbody tr')) {
+      const no   = parseInt(row.querySelector('[name=sha_no]')?.value) || 0;
+      const memo = row.querySelector('[name=sha_memo]')?.value?.trim() || '';
+      if (!no) continue;
+      const catalog = HERO_ABILITIES_CATALOG.find(c => c.no === no);
+      hero_abilities.push({ no, name: catalog?.name || '', memo });
+    }
+
     // 歌術
     const singer_songs = [];
     for (const row of f.querySelectorAll('#singer-song-tbody tr')) {
       const no   = parseInt(row.querySelector('[name=ssong_no]')?.value) || 0;
-      const rank = parseInt(row.querySelector('[name=ssong_rank]')?.value) || 1;
+      const rank = row.querySelector('[name=ssong_rank]')?.value || '1';
       const memo = row.querySelector('[name=ssong_memo]')?.value?.trim() || '';
       if (!no) continue;
       const catalog = SONGS_CATALOG.find(c => c.no === no);
@@ -697,6 +787,7 @@ const SingerForm = {
         defense: gi('smod_defense'),
       },
       singer_abilities,
+      hero_abilities,
       singer_songs,
       weapons,
       armors,
@@ -722,6 +813,21 @@ const SingerForm = {
 
   removeAbility(i) {
     const rows = document.querySelectorAll('#singer-ability-tbody tr');
+    if (rows[i]) rows[i].remove();
+  },
+
+  addHeroAbility() {
+    const tbody = document.getElementById('singer-hero-ability-tbody');
+    if (!tbody) return;
+    const i = tbody.querySelectorAll('tr').length;
+    const tr = document.createElement('tr');
+    tr.dataset.sha = i;
+    tr.innerHTML = this._heroAbilityRow({ no: '', memo: '' }, i);
+    tbody.appendChild(tr);
+  },
+
+  removeHeroAbility(i) {
+    const rows = document.querySelectorAll('#singer-hero-ability-tbody tr');
     if (rows[i]) rows[i].remove();
   },
 
