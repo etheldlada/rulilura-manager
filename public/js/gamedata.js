@@ -88,6 +88,9 @@ const ABILITY_NAMES = ['筋力', '器用さ', '敏捷', '生命力', '知力', '
 // 符号付き数値文字列（ccfolia パラメータ参照用）
 function signedStr(v) { return (v >= 0 ? '+' : '') + v; }
 
+// 追加ダメージ式の符号補完（「2」→「+2」、「1D10」→「+1D10」、「-3」→「-3」）
+function _normDmgBonus(b) { return (b.startsWith('+') || b.startsWith('-')) ? b : '+' + b; }
+
 // ccfoliaのコマンド生成
 function buildCcfoliaCommands(heroData) {
   const d = heroData;
@@ -123,7 +126,7 @@ function buildCcfoliaCommands(heroData) {
   }
 
   // 歌術アイテムの命中修正・追加ダメージを集計
-  const songDmgBonus = (d.song_items || []).map(it => it.damage_bonus || '').filter(Boolean).join('');
+  const songDmgBonus = (d.song_items || []).map(it => it.damage_bonus?.trim() || '').filter(Boolean).map(_normDmgBonus).join('');
 
   // 攻撃ロール（個人武器）
   for (const w of d.weapons || []) {
@@ -204,7 +207,7 @@ function buildSingerCcfoliaCommands(singerData) {
 
   // 歌術アイテムの命中修正・追加ダメージを集計
   const singerSongHitMod  = (d.song_items || []).reduce((s, it) => s + (it.hit_mod || 0), 0);
-  const singerSongDmgBonus = (d.song_items || []).map(it => it.damage_bonus || '').filter(Boolean).join('');
+  const singerSongDmgBonus = (d.song_items || []).map(it => it.damage_bonus?.trim() || '').filter(Boolean).map(_normDmgBonus).join('');
 
   for (const w of d.weapons || []) {
     if (!w.name) continue;
