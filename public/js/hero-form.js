@@ -94,7 +94,7 @@ const HeroForm = {
       </td>
       <td style="min-width:160px;font-size:.75rem;color:var(--text-dim)" class="hab-summary">${ab.no ? (HERO_ABILITIES_CATALOG.find(c=>c.no==ab.no)?.summary||'') : ''}</td>
       <td style="min-width:200px"><input name="hab_memo" value="${(ab.memo||'').replace(/"/g,'&quot;')}" placeholder="習得時のメモ（適用対象など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeAbility(${i})">×</button></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeAbility(this)">×</button></td>
     </tr>`;
   },
 
@@ -121,7 +121,7 @@ const HeroForm = {
       <td style="min-width:160px"><input name="hsi_memo" value="${(item.memo||'').replace(/"/g,'&quot;')}" placeholder="メモ（個数・入手経緯など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
       <td style="text-align:center"><input type="number" name="hsi_hit_mod" value="${item.hit_mod||0}" style="width:55px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.8rem;text-align:center"></td>
       <td><input name="hsi_damage_bonus" value="${item.damage_bonus||''}" placeholder="+2 or +1D10" style="width:90px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.8rem"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeSongItem(${i})">×</button></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeSongItem(this)">×</button></td>
     </tr>`;
   },
 
@@ -161,7 +161,7 @@ const HeroForm = {
         <td><input name="wsk" value="${w.skill || ''}" placeholder="剣技"></td>
         <td><input name="wd" value="${w.damage || ''}" placeholder="1D10+5"></td>
         <td><input name="wr" value="${w.range || '白'}" style="width:45px"></td>
-        <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeWeapon(${i})">×</button></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeWeapon(this)">×</button></td>
       </tr>`).join('');
 
     const armorRows = (d.armors || []).map((a, i) => `
@@ -169,7 +169,7 @@ const HeroForm = {
         <td><input name="armn" value="${a.name || ''}" placeholder="皮ヨロイ・小盾など" class="armor-calc"></td>
         <td><input name="armd" value="${a.defense || ''}" placeholder="3" style="width:60px" type="number" class="armor-calc"></td>
         <td><input name="armp" value="${a.evasionPenalty || ''}" placeholder="0" style="width:60px" type="number" class="armor-calc"></td>
-        <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeArmor(${i})">×</button></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeArmor(this)">×</button></td>
       </tr>`).join('');
 
     // 英雄能力行（旧データ互換：abilities_memoのみある場合は空行1つを用意）
@@ -471,9 +471,8 @@ const HeroForm = {
     tbody.appendChild(tr);
   },
 
-  removeAbility(i) {
-    const rows = document.querySelectorAll('#hero-ability-tbody tr');
-    if (rows[i]) rows[i].remove();
+  removeAbility(btn) {
+    btn.closest('tr')?.remove();
   },
 
   addSongItem() {
@@ -486,9 +485,8 @@ const HeroForm = {
     tbody.appendChild(tr);
   },
 
-  removeSongItem(i) {
-    const rows = document.querySelectorAll('#hero-song-item-tbody tr');
-    if (rows[i]) rows[i].remove();
+  removeSongItem(btn) {
+    btn.closest('tr')?.remove();
   },
 
   addWeapon() {
@@ -503,13 +501,12 @@ const HeroForm = {
       <td><input name="wsk" placeholder="剣技"></td>
       <td><input name="wd" placeholder="1D10+5"></td>
       <td><input name="wr" value="白" style="width:45px"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeWeapon(${i})">×</button></td>`;
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeWeapon(this)">×</button></td>`;
     tbody.appendChild(tr);
   },
 
-  removeWeapon(i) {
-    const rows = document.querySelectorAll('#weapon-tbody tr');
-    if (rows[i]) rows[i].remove();
+  removeWeapon(btn) {
+    btn.closest('tr')?.remove();
   },
 
   addArmor() {
@@ -522,15 +519,15 @@ const HeroForm = {
       <td><input name="armn" placeholder="皮ヨロイ・小盾など" class="armor-calc"></td>
       <td><input name="armd" placeholder="3" style="width:60px" type="number" class="armor-calc"></td>
       <td><input name="armp" placeholder="0" style="width:60px" type="number" class="armor-calc"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeArmor(${i})">×</button></td>`;
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="HeroForm.removeArmor(this)">×</button></td>`;
     tbody.appendChild(tr);
     this._attachArmorCalc(tr);
     this._updateArmorTotals();
   },
 
-  removeArmor(i) {
-    const rows = document.querySelectorAll('#armor-tbody tr');
-    if (rows[i]) { rows[i].remove(); this._updateArmorTotals(); }
+  removeArmor(btn) {
+    btn.closest('tr')?.remove();
+    this._updateArmorTotals();
   },
 
   // 防具行ごとの入力イベント付与

@@ -320,7 +320,7 @@ const SingerForm = {
       </td>
       <td style="min-width:160px;font-size:.75rem;color:var(--text-dim)" class="sab-summary">${ab.no ? (SINGER_ABILITIES_CATALOG.find(c=>c.no==ab.no)?.summary||'') : ''}</td>
       <td style="min-width:200px"><input name="sab_memo" value="${(ab.memo||'').replace(/"/g,'&quot;')}" placeholder="習得時のメモ（適用対象など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeAbility(${i})">×</button></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeAbility(this)">×</button></td>
     </tr>`;
   },
 
@@ -359,7 +359,7 @@ const SingerForm = {
         <td style="text-align:center;padding:.2rem">${ac.is_turn_action ? 'T' : ''}</td>
         <td style="padding:.2rem .4rem;font-size:.8rem">${esc(ac.cost)}</td>
         <td style="padding:.2rem .4rem;font-size:.78rem;color:var(--text-dim)">${esc(ac.effect)}</td>
-        <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeAction(${i})">×</button></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeAction(this)">×</button></td>
       </tr>`;
     }
     return `<tr data-aci="${i}" data-origin="0">
@@ -367,7 +367,7 @@ const SingerForm = {
       <td style="text-align:center;padding:.2rem"><input type="checkbox" name="sac_turn" ${ac.is_turn_action?'checked':''}></td>
       <td style="padding:.2rem .4rem"><input name="sac_cost" value="${esc(ac.cost)}" placeholder="肉体×1回" style="width:100px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.82rem"></td>
       <td style="padding:.2rem .4rem"><input name="sac_effect" value="${esc(ac.effect)}" placeholder="効果メモ" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.82rem"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeAction(${i})">×</button></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeAction(this)">×</button></td>
     </tr>`;
   },
 
@@ -385,7 +385,7 @@ const SingerForm = {
       </td>
       <td style="min-width:160px;font-size:.75rem;color:var(--text-dim)" class="sha-summary">${ab.no ? (HERO_ABILITIES_CATALOG.find(c=>c.no==ab.no)?.summary||'') : ''}</td>
       <td style="min-width:200px"><input name="sha_memo" value="${(ab.memo||'').replace(/"/g,'&quot;')}" placeholder="習得時のメモ（適用対象など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeHeroAbility(${i})">×</button></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeHeroAbility(this)">×</button></td>
     </tr>`;
   },
 
@@ -412,7 +412,7 @@ const SingerForm = {
       <td style="min-width:160px"><input name="ssi_memo" value="${(item.memo||'').replace(/"/g,'&quot;')}" placeholder="メモ（個数・入手経緯など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
       <td style="text-align:center"><input type="number" name="ssi_hit_mod" value="${item.hit_mod||0}" style="width:55px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.8rem;text-align:center"></td>
       <td><input name="ssi_damage_bonus" value="${item.damage_bonus||''}" placeholder="+2 or +1D10" style="width:90px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.8rem"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeSongItem(${i})">×</button></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeSongItem(this)">×</button></td>
     </tr>`;
   },
 
@@ -449,7 +449,7 @@ const SingerForm = {
       </td>
       <td style="min-width:220px;font-size:.74rem;color:var(--text-dim)" class="ssong-effect">${effectText}</td>
       <td style="min-width:160px"><input name="ssong_memo" value="${(s.memo||'').replace(/"/g,'&quot;')}" placeholder="メモ（コスト・注意など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeSong(${i})">×</button></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeSong(this)">×</button></td>
     </tr>`;
   },
 
@@ -536,7 +536,7 @@ const SingerForm = {
         <td><input name="swsk" value="${w.skill||''}" placeholder="剣技"></td>
         <td><input name="swd" value="${w.damage||''}" placeholder="1D10+5"></td>
         <td><input name="swr" value="${w.range||'白'}" style="width:45px"></td>
-        <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeWeapon(${i})">×</button></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeWeapon(this)">×</button></td>
       </tr>`).join('');
 
     // 防具行（戦闘系歌姫用）
@@ -545,7 +545,7 @@ const SingerForm = {
         <td><input name="sarmn" value="${a.name||''}" placeholder="皮ヨロイ・小盾など" class="singer-armor-calc"></td>
         <td><input name="sarmd" value="${a.defense||''}" placeholder="3" style="width:60px" type="number" class="singer-armor-calc"></td>
         <td><input name="sarmp" value="${a.evasionPenalty||''}" placeholder="0" style="width:60px" type="number" class="singer-armor-calc"></td>
-        <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeArmor(${i})">×</button></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeArmor(this)">×</button></td>
       </tr>`).join('');
 
     return `
@@ -959,14 +959,14 @@ const SingerForm = {
     tbody.appendChild(tr);
   },
 
-  removeAbility(i) {
-    const rows = document.querySelectorAll('#singer-ability-tbody tr');
-    if (!rows[i]) return;
-    const abilityNo = parseInt(rows[i].querySelector('[name=sab_no]')?.value) || 0;
+  removeAbility(btn) {
+    const row = btn.closest('tr');
+    if (!row) return;
+    const abilityNo = parseInt(row.querySelector('[name=sab_no]')?.value) || 0;
     if (abilityNo) {
       document.querySelectorAll(`#singer-action-tbody tr[data-origin="${abilityNo}"]`).forEach(r => r.remove());
     }
-    rows[i].remove();
+    row.remove();
   },
 
   addAction() {
@@ -977,9 +977,8 @@ const SingerForm = {
       this._actionRow({ name:'', is_turn_action:false, cost:'', effect:'', origin_no:0 }, i));
   },
 
-  removeAction(i) {
-    const rows = document.querySelectorAll('#singer-action-tbody tr');
-    if (rows[i]) rows[i].remove();
+  removeAction(btn) {
+    btn.closest('tr')?.remove();
   },
 
   addHeroAbility() {
@@ -992,9 +991,8 @@ const SingerForm = {
     tbody.appendChild(tr);
   },
 
-  removeHeroAbility(i) {
-    const rows = document.querySelectorAll('#singer-hero-ability-tbody tr');
-    if (rows[i]) rows[i].remove();
+  removeHeroAbility(btn) {
+    btn.closest('tr')?.remove();
   },
 
   addSong() {
@@ -1007,9 +1005,8 @@ const SingerForm = {
     tbody.appendChild(tr);
   },
 
-  removeSong(i) {
-    const rows = document.querySelectorAll('#singer-song-tbody tr');
-    if (rows[i]) rows[i].remove();
+  removeSong(btn) {
+    btn.closest('tr')?.remove();
   },
 
   addWeapon() {
@@ -1024,13 +1021,12 @@ const SingerForm = {
       <td><input name="swsk" placeholder="剣技"></td>
       <td><input name="swd" placeholder="1D10+5"></td>
       <td><input name="swr" value="白" style="width:45px"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeWeapon(${i})">×</button></td>`;
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeWeapon(this)">×</button></td>`;
     tbody.appendChild(tr);
   },
 
-  removeWeapon(i) {
-    const rows = document.querySelectorAll('#singer-weapon-tbody tr');
-    if (rows[i]) rows[i].remove();
+  removeWeapon(btn) {
+    btn.closest('tr')?.remove();
   },
 
   addArmor() {
@@ -1043,15 +1039,15 @@ const SingerForm = {
       <td><input name="sarmn" placeholder="皮ヨロイ・小盾など" class="singer-armor-calc"></td>
       <td><input name="sarmd" placeholder="3" style="width:60px" type="number" class="singer-armor-calc"></td>
       <td><input name="sarmp" placeholder="0" style="width:60px" type="number" class="singer-armor-calc"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeArmor(${i})">×</button></td>`;
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeArmor(this)">×</button></td>`;
     tbody.appendChild(tr);
     this._attachArmorCalc(tr);
     this._updateArmorTotals();
   },
 
-  removeArmor(i) {
-    const rows = document.querySelectorAll('#singer-armor-tbody tr');
-    if (rows[i]) { rows[i].remove(); this._updateArmorTotals(); }
+  removeArmor(btn) {
+    btn.closest('tr')?.remove();
+    this._updateArmorTotals();
   },
 
   addSongItem() {
@@ -1064,9 +1060,8 @@ const SingerForm = {
     tbody.appendChild(tr);
   },
 
-  removeSongItem(i) {
-    const rows = document.querySelectorAll('#singer-song-item-tbody tr');
-    if (rows[i]) rows[i].remove();
+  removeSongItem(btn) {
+    btn.closest('tr')?.remove();
   },
 
   // 防具行ごとの入力イベント付与

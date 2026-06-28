@@ -82,7 +82,7 @@ const ArmorForm = {
       <td><input name="hl_def"   value="${loc.defense||''}" placeholder="6" style="width:50px" type="number" min="0"></td>
       <td><input name="hl_hp"    value="${loc.hp||''}"   placeholder="30" style="width:60px"></td>
       <td><input name="hl_eff"   value="${loc.effect||''}" placeholder="機体破壊" style="width:160px"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="ArmorForm.removeHitLoc(${i})">×</button></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="ArmorForm.removeHitLoc(this)">×</button></td>
     </tr>`;
   },
 
@@ -120,7 +120,7 @@ const ArmorForm = {
         <td><input name="awwt"  value="${w.weight||''}"     style="width:45px" type="number" class="armor-weapon-weight"></td>
         <td><input name="awhp"  value="${(w.hardpoint||'').replace(/"/g,'&quot;')}" placeholder="手・肩×2など" style="width:90px"></td>
         <td><input name="awmemo" value="${(w.memo||'').replace(/"/g,'&quot;')}" placeholder="メモ" style="min-width:100px"></td>
-        <td><button type="button" class="btn btn-sm btn-danger" onclick="ArmorForm.removeWeapon(${i})">×</button></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="ArmorForm.removeWeapon(this)">×</button></td>
       </tr>`).join('');
 
     const hitLocRows = (adv.hit_locations || []).map((loc, i) => this._hitLocRow(loc, i)).join('');
@@ -487,16 +487,16 @@ const ArmorForm = {
       <td><input name="awwt" style="width:45px" type="number" class="armor-weapon-weight"></td>
       <td><input name="awhp" placeholder="手・肩×2など" style="width:90px"></td>
       <td><input name="awmemo" placeholder="メモ" style="min-width:100px"></td>
-      <td><button type="button" class="btn btn-sm btn-danger" onclick="ArmorForm.removeWeapon(${i})">×</button></td>`;
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="ArmorForm.removeWeapon(this)">×</button></td>`;
     tbody.appendChild(tr);
     this._attachRowCalc(tr);
     this._recalcWeaponCombatMod(tr);
     this._updateLoadDisplay();
   },
 
-  removeWeapon(i) {
-    const rows = document.querySelectorAll('#armor-weapon-tbody tr');
-    if (rows[i]) { rows[i].remove(); this._updateLoadDisplay(); }
+  removeWeapon(btn) {
+    btn.closest('tr')?.remove();
+    this._updateLoadDisplay();
   },
 
   addHitLoc() {
@@ -509,9 +509,8 @@ const ArmorForm = {
     tbody.appendChild(tr);
   },
 
-  removeHitLoc(i) {
-    const rows = document.querySelectorAll('#hit-loc-tbody tr');
-    if (rows[i]) rows[i].remove();
+  removeHitLoc(btn) {
+    btn.closest('tr')?.remove();
   },
 
   // デフォルト7部位を一括追加
