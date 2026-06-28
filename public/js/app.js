@@ -869,6 +869,7 @@ const App = {
             { label: '白兵修正', value: signedStr(d.modifiers?.melee||0) },
             { label: '射撃修正', value: signedStr(d.modifiers?.ranged||0) },
             { label: '抵抗修正', value: signedStr(d.modifiers?.resistance||0) },
+            { label: '歌術アイテム命中修正', value: signedStr((d.song_items||[]).reduce((s,it)=>s+(it.hit_mod||0),0)) },
             ...(d.gender === '男性' ? [{ label: '蟲化ポイント', value: String(d.mushika?.points||0) }] : []),
           ],
         }

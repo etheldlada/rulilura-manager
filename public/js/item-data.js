@@ -54,5 +54,5 @@ const SONG_ITEMS_CATALOG = [
 
 // 歌術アイテム1行分の空テンプレート
 function emptySongItemRow() {
-  return { no: '', name: '', effect: '', memo: '' };
+  return { no: '', name: '', effect: '', memo: '', hit_mod: 0, damage_bonus: '' };
 }

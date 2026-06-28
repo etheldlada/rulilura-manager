@@ -317,6 +317,8 @@ const SingerForm = {
       </td>
       <td style="min-width:220px;font-size:.75rem;color:var(--text-dim)" class="ssi-effect">${item.no ? (SONG_ITEMS_CATALOG.find(c=>c.no==item.no)?.effect||'') : ''}</td>
       <td style="min-width:160px"><input name="ssi_memo" value="${(item.memo||'').replace(/"/g,'&quot;')}" placeholder="メモ（個数・入手経緯など）" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .4rem;border-radius:4px;font-size:.8rem"></td>
+      <td style="text-align:center"><input type="number" name="ssi_hit_mod" value="${item.hit_mod||0}" style="width:55px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.8rem;text-align:center"></td>
+      <td><input name="ssi_damage_bonus" value="${item.damage_bonus||''}" placeholder="+2 or +1D10" style="width:90px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.8rem"></td>
       <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeSongItem(${i})">×</button></td>
     </tr>`;
   },
@@ -649,6 +651,8 @@ const SingerForm = {
                   <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">アイテム名</th>
                   <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果</th>
                   <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">メモ</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:center">命中修正</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">追加ダメージ</th>
                   <th style="width:36px"></th>
                 </tr>
               </thead>
@@ -767,7 +771,11 @@ const SingerForm = {
       const memo = row.querySelector('[name=ssi_memo]')?.value?.trim() || '';
       if (!no) continue;
       const catalog = SONG_ITEMS_CATALOG.find(c => c.no === no);
-      song_items.push({ no, name: catalog?.name || '', effect: catalog?.effect || '', memo });
+      song_items.push({
+        no, name: catalog?.name || '', effect: catalog?.effect || '', memo,
+        hit_mod:      parseInt(row.querySelector('[name=ssi_hit_mod]')?.value) || 0,
+        damage_bonus: row.querySelector('[name=ssi_damage_bonus]')?.value?.trim() || '',
+      });
     }
 
     return {

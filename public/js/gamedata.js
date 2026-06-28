@@ -122,6 +122,9 @@ function buildCcfoliaCommands(heroData) {
     });
   }
 
+  // 歌術アイテムの命中修正・追加ダメージを集計
+  const songDmgBonus = (d.song_items || []).map(it => it.damage_bonus || '').filter(Boolean).join('');
+
   // 攻撃ロール（個人武器）
   for (const w of d.weapons || []) {
     if (!w.name) continue;
@@ -130,13 +133,13 @@ function buildCcfoliaCommands(heroData) {
     const modLabel = isMelee ? '白兵修正' : '射撃修正';
     const baseHit  = w.hit || 0;
 
-    // 命中: 基本命中 ＋ {白兵修正} or {射撃修正}（パラメータ参照）
+    // 命中: 基本命中 ＋ {白兵修正} or {射撃修正} ＋ {歌術アイテム命中修正}（パラメータ参照）
     cmds.push({
       label: `攻撃:${w.name}`,
-      value: `1D100<=${baseHit}{${modLabel}} [${w.name}命中 基本${baseHit}+{${modLabel}}]`
+      value: `1D100<=${baseHit}{${modLabel}}{歌術アイテム命中修正} [${w.name}命中 基本${baseHit}+{${modLabel}}{歌術アイテム命中修正}]`
     });
 
-    // ダメージ: 白兵＝筋力修正のみ、射撃＝なし
+    // ダメージ: 白兵＝筋力修正のみ、射撃＝なし（＋歌術アイテム追加ダメージ）
     if (w.damage) {
       let dmgExpr = w.damage;
       let dmgNote = w.name;
@@ -144,6 +147,10 @@ function buildCcfoliaCommands(heroData) {
         const sign = signedStr(strMod);
         dmgExpr = `${w.damage}${sign}`;
         dmgNote = `${w.name} 筋力修正${sign}込み`;
+      }
+      if (songDmgBonus) {
+        dmgExpr += songDmgBonus;
+        dmgNote += ` 歌術${songDmgBonus}`;
       }
       cmds.push({
         label: `ダメージ:${w.name}`,
@@ -195,17 +202,22 @@ function buildSingerCcfoliaCommands(singerData) {
   const rangedMod = d.modifiers?.ranged || 0;
   const strMod    = (d.abilities?.['筋力'] || 10) - 10;
 
+  // 歌術アイテムの命中修正・追加ダメージを集計
+  const singerSongHitMod  = (d.song_items || []).reduce((s, it) => s + (it.hit_mod || 0), 0);
+  const singerSongDmgBonus = (d.song_items || []).map(it => it.damage_bonus || '').filter(Boolean).join('');
+
   for (const w of d.weapons || []) {
     if (!w.name) continue;
     const isMelee   = (w.range === '白');
     const combatMod = isMelee ? meleeMod : rangedMod;
     const modLabel  = isMelee ? '白兵修正' : '射撃修正';
     const baseHit   = w.hit || 0;
-    const finalHit  = baseHit + combatMod;
+    const finalHit  = baseHit + combatMod + singerSongHitMod;
     const hitSign   = combatMod >= 0 ? `+${combatMod}` : `${combatMod}`;
+    const songHitNote = singerSongHitMod !== 0 ? ` 歌術アイテム${signedStr(singerSongHitMod)}` : '';
 
     cmds.push({
-      value: `1D100<=${finalHit} [${w.name}命中 基本${baseHit}${hitSign}(${modLabel})]`
+      value: `1D100<=${finalHit} [${w.name}命中 基本${baseHit}${hitSign}(${modLabel})${songHitNote}]`
     });
 
     if (w.damage) {
@@ -215,6 +227,10 @@ function buildSingerCcfoliaCommands(singerData) {
         const strSign = strMod >= 0 ? `+${strMod}` : `${strMod}`;
         dmgExpr = `${w.damage}${strSign}`;
         dmgNote = `${w.name} 筋力修正${strSign}込み`;
+      }
+      if (singerSongDmgBonus) {
+        dmgExpr += singerSongDmgBonus;
+        dmgNote += ` 歌術${singerSongDmgBonus}`;
       }
       cmds.push({
         value: `${dmgExpr} [${dmgNote}]`
