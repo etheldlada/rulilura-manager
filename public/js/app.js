@@ -696,6 +696,23 @@ const App = {
         </div>
       </div>
       ${singerAbilitiesHTML}
+      ${(d.singer_actions||[]).length ? `<div class="form-section"><h4>歌姫アクション</h4>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:400px">
+            <thead><tr style="background:var(--surface)">
+              <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);text-align:left">アクション名</th>
+              <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);text-align:center;width:40px">T</th>
+              <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);text-align:left">コスト</th>
+              <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);text-align:left">効果</th>
+            </tr></thead>
+            <tbody>${(d.singer_actions||[]).map(ac=>`<tr>
+              <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border)"><strong>${ac.name||''}</strong></td>
+              <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);text-align:center">${ac.is_turn_action?'T':''}</td>
+              <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.8rem">${ac.cost||''}</td>
+              <td style="padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text-dim)">${ac.effect||''}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div></div>` : ''}
       ${singerSongsHTML}
       ${combatHTML}
       ${songItemsHTML}

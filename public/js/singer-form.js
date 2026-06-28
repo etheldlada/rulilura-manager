@@ -7,63 +7,115 @@ const SINGER_ABILITIES_CATALOG = [
   { no:3,  name:'歌姫レベルアップ',          summary:'歌姫レベル+1、好きな能力値+1、HP+5' },
   { no:4,  name:'階位上昇',                summary:'階位+1（作成時2倍）' },
   { no:5,  name:'絆レベルアップ',            summary:'絆レベル+1（作成時以外はコスト2倍）' },
-  { no:6,  name:'戦闘支援（ダメージ）',      summary:'武器スキル2つに+10、戦闘支援でダメージ増加' },
-  { no:7,  name:'戦闘支援（命中値）',        summary:'武器スキル2つに+10、戦闘支援で命中値UP' },
+  { no:6,  name:'戦闘支援（ダメージ）',      summary:'武器スキル2つに+10、戦闘支援でダメージ増加',
+    actions:[{ name:'戦闘支援', isTurnAction:true, cost:'肉体×1回', effect:'英雄の受けるダメージを割り振り可能、英雄のダメージに修正を加える' }] },
+  { no:7,  name:'戦闘支援（命中値）',        summary:'武器スキル2つに+10、戦闘支援で命中値UP',
+    actions:[{ name:'戦闘支援', isTurnAction:true, cost:'肉体×1回', effect:'英雄のダメージを割り振り、英雄の命中値をアップ' }] },
   { no:8,  name:'戦闘系歌姫',              summary:'武器スキル2つに+10、単独で戦闘参加可' },
-  { no:9,  name:'突撃娘',                  summary:'【筋力】+4、両手武器を片手で扱える' },
+  { no:9,  name:'突撃娘',                  summary:'【筋力】+4、両手武器を片手で扱える',
+    actions:[{ name:'突撃', isTurnAction:true, cost:'肉体×2回', effect:'命中値と回避修正のトレードオフ調整、ダメージにボーナス' }] },
   { no:10, name:'不戦歌姫',               summary:'戦闘参加で降伏か気絶、追加歌姫能力2個か英雄能力1つ授与' },
-  { no:11, name:'九死に一生',              summary:'回避修正+10' },
-  { no:12, name:'コネ',                   summary:'FP獲得、コネでの交渉に+20' },
+  { no:11, name:'九死に一生',              summary:'回避修正+10',
+    actions:[{ name:'戦闘回避', isTurnAction:false, cost:'肉体×2回', effect:'戦闘時に被害を回避、気絶や死亡を防止' }] },
+  { no:12, name:'コネ',                   summary:'FP獲得、コネでの交渉に+20',
+    actions:[{ name:'コネでの交渉', isTurnAction:false, cost:'気力×1回', effect:'特定組織への交渉スキルに+20ボーナス' }] },
   { no:13, name:'家宝',                   summary:'60万G以下の歌術アイテムを1〜2個獲得' },
   { no:14, name:'スーパー歌姫',            summary:'英雄の能力値低下→歌姫能力値UP、追加能力3つ' },
-  { no:15, name:'ハイパー歌姫',            summary:'肉体・気力・絆ゲージ+1、消耗値+2' },
+  { no:15, name:'ハイパー歌姫',            summary:'肉体・気力・絆ゲージ+1、消耗値+2',
+    actions:[{ name:'英雄の危機', isTurnAction:true, cost:'絆×2回', effect:'歌姫を英雄の場所に移動、一時的に身代わり能力を付与' }] },
   { no:16, name:'奏甲スキー',              summary:'チューン2つを無償・ノーチェックで獲得' },
-  { no:17, name:'特殊起動：パワーモード',   summary:'白兵修正+10、防御値+2、ダメージ修正+5' },
-  { no:18, name:'特殊起動：射撃モード',     summary:'射撃修正+20、偵察修正+15' },
-  { no:19, name:'特殊起動：甲殻モード',     summary:'防御値+5、各HP+5、抵抗修正+30' },
-  { no:20, name:'特殊起動：スピードモード', summary:'白兵・回避・抵抗修正+10、不整地移動能力獲得' },
-  { no:21, name:'特殊起動：待ち伏せモード', summary:'射撃・回避・抵抗・偵察修正+20、防御値+4' },
+  { no:17, name:'特殊起動：パワーモード',   summary:'白兵修正+10、防御値+2、ダメージ修正+5',
+    actions:[{ name:'特殊起動：パワーモード', isTurnAction:false, cost:'気力×1回', effect:'奏甲の白兵修正+10、防御値+2、ダメージ+5' }] },
+  { no:18, name:'特殊起動：射撃モード',     summary:'射撃修正+20、偵察修正+15',
+    actions:[{ name:'特殊起動：射撃モード', isTurnAction:false, cost:'気力×1回', effect:'奏甲の射撃修正+20、偵察修正+15' }] },
+  { no:19, name:'特殊起動：甲殻モード',     summary:'防御値+5、各HP+5、抵抗修正+30',
+    actions:[{ name:'特殊起動：甲殻モード', isTurnAction:false, cost:'気力×1回', effect:'防御値+5、HP増加、抵抗修正+30' }] },
+  { no:20, name:'特殊起動：スピードモード', summary:'白兵・回避・抵抗修正+10、不整地移動能力獲得',
+    actions:[{ name:'特殊起動（スピードモード）', isTurnAction:false, cost:'気力×1回', effect:'修正+10、不整地移動能力、防御値-2、偶数ターン移動+1' }] },
+  { no:21, name:'特殊起動：待ち伏せモード', summary:'射撃・回避・抵抗・偵察修正+20、防御値+4',
+    actions:[{ name:'特殊起動（待ち伏せモード）', isTurnAction:false, cost:'気力×1回', effect:'射撃・回避・抵抗・偵察に+20、防御値+4、白兵攻撃で解除' }] },
   { no:22, name:'特殊起動改善',            summary:'指定モード起動時にペアの【精神力】+4' },
-  { no:23, name:'特殊起動：リミッタOffモード', summary:'攻撃回数+1、白兵・射撃・回避・抵抗+10、防御値+2' },
-  { no:24, name:'起動安定',               summary:'障害モードペナルティ-10に軽減' },
-  { no:25, name:'起動延長',               summary:'起動停止時に+3ターン起動継続' },
+  { no:23, name:'特殊起動：リミッタOffモード', summary:'攻撃回数+1、白兵・射撃・回避・抵抗+10、防御値+2',
+    actions:[{ name:'特殊起動（リミッタOffモード）', isTurnAction:false, cost:'気力×1回（持続中、毎手番開始時に気力×1追加）', effect:'攻撃回数+1、各修正+10、防御値+2、ダメージ+4' }] },
+  { no:24, name:'起動安定',               summary:'障害モードペナルティ-10に軽減',
+    actions:[{ name:'障害モード回避', isTurnAction:false, cost:'気力×1回', effect:'精神力チェック成功で障害モード回避' }] },
+  { no:25, name:'起動延長',               summary:'起動停止時に+3ターン起動継続',
+    actions:[{ name:'起動延長', isTurnAction:false, cost:'気力×1回', effect:'奏甲の起動停止後、3ターン戦闘起動状態継続' }] },
   { no:26, name:'奏甲乗り',               summary:'歌姫が英雄のごとく奏甲に搭乗・操縦可能' },
-  { no:27, name:'人外',                   summary:'肉体・気力消耗値+1、肉体ゲージ+1' },
+  { no:27, name:'人外',                   summary:'肉体・気力消耗値+1、肉体ゲージ+1',
+    actions:[{ name:'秘められた力', isTurnAction:true, cost:'肉体・気力・絆×1回ずつ', effect:'30分間、指定した歌姫アクション1つを使用可能' }] },
   { no:28, name:'HPアップ',               summary:'通常/負傷HP+10、自然回復量+3' },
   { no:29, name:'MPアップ',               summary:'気力消耗値+1（偶数回目は気力ゲージ+1）' },
-  { no:30, name:'頭脳明晰',               summary:'絆NG行動追加、歌姫の提案、看破（80%でウソ見抜く）' },
-  { no:31, name:'メガネっ子',              summary:'【知力】+3・【精神力】-3、気力消耗値+1' },
-  { no:32, name:'ダンマリ',               summary:'消耗チェック+1倍（全成功でダメージ消去か獲得）' },
-  { no:33, name:'天然／不思議ちゃん',      summary:'絆ダメージ/ゲイン40%で反対側に入る、回避修正+10' },
-  { no:34, name:'電波',                   summary:'気力ゲージ+1、抵抗修正+10' },
+  { no:30, name:'頭脳明晰',               summary:'絆NG行動追加、歌姫の提案、看破（80%でウソ見抜く）',
+    actions:[
+      { name:'歌姫の提案', isTurnAction:true,  cost:'絆×1回',  effect:'現状に対する提案をマスターに行わせる' },
+      { name:'看破',       isTurnAction:true,  cost:'気力×2回', effect:'ウソを80%の確率で見破る' },
+    ]},
+  { no:31, name:'メガネっ子',              summary:'【知力】+3・【精神力】-3、気力消耗値+1',
+    actions:[{ name:'的確な対応', isTurnAction:true, cost:'絆×2回', effect:'解決策提示またはアイテム調達' }] },
+  { no:32, name:'ダンマリ',               summary:'消耗チェック+1倍（全成功でダメージ消去か獲得）',
+    actions:[{ name:'「知らないわ…」', isTurnAction:false, cost:'なし', effect:'自分の成功した判定を失敗に変更' }] },
+  { no:33, name:'天然／不思議ちゃん',      summary:'絆ダメージ/ゲイン40%で反対側に入る、回避修正+10',
+    actions:[{ name:'失踪', isTurnAction:true, cost:'なし', effect:'どこかに消える（戦闘・ピンチ時は不可）' }] },
+  { no:34, name:'電波',                   summary:'気力ゲージ+1、抵抗修正+10',
+    actions:[{ name:'ご託宣', isTurnAction:true, cost:'気力×1回', effect:'占いで回答を得る（正確性は不保証）' }] },
   { no:35, name:'ワガママ/退屈娘',         summary:'絆NG行動追加し英雄能力1つ授与か歌姫能力2つ獲得' },
-  { no:36, name:'イケイケ',               summary:'気力ゲージ+1、特殊起動効果1.5倍' },
+  { no:36, name:'イケイケ',               summary:'気力ゲージ+1、特殊起動効果1.5倍',
+    actions:[{ name:'ＧＯＧＯ！', isTurnAction:false, cost:'なし', effect:'1回の戦闘につき1回使用、消耗値+2' }] },
   { no:37, name:'バカ',                   summary:'肉体・気力消耗値+1、絆獲得値+1' },
-  { no:38, name:'のーてんき',             summary:'気力・絆のNG行動消耗値に+3、自然回復量2倍' },
-  { no:39, name:'どじっ子',               summary:'ゾロ目失敗をトラブルに発展させ獲得チェック' },
+  { no:38, name:'のーてんき',             summary:'気力・絆のNG行動消耗値に+3、自然回復量2倍',
+    actions:[{ name:'「あれっ、何だっけ？」', isTurnAction:true, cost:'気力×1回', effect:'知力チェック失敗で精神効果1つを無視' }] },
+  { no:39, name:'どじっ子',               summary:'ゾロ目失敗をトラブルに発展させ獲得チェック',
+    actions:[
+      { name:'どじ',     isTurnAction:true,  cost:'なし',    effect:'ゾロ目失敗をトラブルに転化、絆獲得チェック可能' },
+      { name:'破壊工作', isTurnAction:false, cost:'気力×2回', effect:'物を不具合にする、または英雄の攻撃の防御値無視' },
+    ]},
   { no:40, name:'デレデレ',               summary:'絆レベル+1、獲得値+1、英雄のMP消費を肩代わり可' },
   { no:41, name:'スーパー英雄',            summary:'歌姫の能力値を下げて英雄の能力値をUP' },
   { no:42, name:'ハイパー英雄',            summary:'英雄の能力値合計+10、英雄能力1つ授与' },
   { no:43, name:'病弱',                   summary:'ハイパー英雄と同じ特典を英雄に、【精神力】か【知力】+3' },
   { no:44, name:'撫子',                   summary:'一般NG行動を軽減、選択NG行動の一部を選ばなくてもよい' },
-  { no:45, name:'ご奉仕',                 summary:'選択/普遍NG行動での絆消耗チェックを無視' },
+  { no:45, name:'ご奉仕',                 summary:'選択/普遍NG行動での絆消耗チェックを無視',
+    actions:[{ name:'ご奉仕', isTurnAction:true, cost:'肉体×2回（ペア以外は×3回）', effect:'8時間の睡眠相当の自然回復を実施（30分要、1日1回）' }] },
   { no:46, name:'無垢',                   summary:'癒しの歌の効果2倍、絆消耗値+2' },
-  { no:47, name:'妹／マスコット系',         summary:'絆消耗値-1・獲得値+1、英雄MP回復、次スキルチェック+10' },
+  { no:47, name:'妹／マスコット系',         summary:'絆消耗値-1・獲得値+1、英雄MP回復、次スキルチェック+10',
+    actions:[
+      { name:'癒し', isTurnAction:true, cost:'気力×2回',          effect:'英雄のMPを1D10+絆レベル回復' },
+      { name:'ぷに', isTurnAction:true, cost:'気力×1回（他対象は×2回）', effect:'次のスキルチェックで+10ボーナス' },
+    ]},
   { no:48, name:'強き絆',                 summary:'通常HP等が0になるたびに獲得チェック可' },
   { no:49, name:'お姫様',                 summary:'《交渉》《恫喝》に+10（選んだ王国出身者には+30）' },
-  { no:50, name:'リーダーシップ',          summary:'歌姫スキルが英雄より高ければ最大3つに+5' },
-  { no:51, name:'カリスマ歌姫',            summary:'階位+1、《交渉》《恫喝》に+20' },
+  { no:50, name:'リーダーシップ',          summary:'歌姫スキルが英雄より高ければ最大3つに+5',
+    actions:[
+      { name:'励まし', isTurnAction:true, cost:'気力×2回', effect:'奏甲または英雄の防御値+5' },
+      { name:'あおり', isTurnAction:true, cost:'気力×2回', effect:'30分間、味方全員に複数効果から1つを選択適用（1日1回）' },
+    ]},
+  { no:51, name:'カリスマ歌姫',            summary:'階位+1、《交渉》《恫喝》に+20',
+    actions:[{ name:'指導', isTurnAction:true, cost:'気力×1回', effect:'対象のスキルチェックに自分のスキル値を追加（最大+15）' }] },
   { no:52, name:'プライド',               summary:'抵抗修正+10、肉体と気力ゲージ全印まで気絶・死亡しない' },
-  { no:53, name:'複雑な女心',              summary:'英雄の危機（戦闘支援使用可）、絆ゲージをリセット' },
+  { no:53, name:'複雑な女心',              summary:'英雄の危機（戦闘支援使用可）、絆ゲージをリセット',
+    actions:[
+      { name:'英雄の危機',       isTurnAction:true,  cost:'気力×1回', effect:'英雄の負傷HP=0で戦闘支援アクション習得' },
+      { name:'あんたなんかーっ！', isTurnAction:false, cost:'なし',    effect:'絆ダメージ時に気力または肉体ダメージを全て消去（1シナリオ1回）' },
+    ]},
   { no:54, name:'激情家',                 summary:'絆消耗値-2・獲得値+2、絆ゲージダメージ時に肉体・気力にも印' },
-  { no:55, name:'反感（男勝り）',          summary:'絆消耗値-2・獲得値-2、英雄と同時スキルチェックで+10' },
-  { no:56, name:'ツンデレ',               summary:'絆レベル+1、絆消耗値-2・獲得値+1' },
-  { no:57, name:'モラルレス',              summary:'英雄の悪事NGを無視できる、禁忌歌術の抵抗修正+20' },
+  { no:55, name:'反感（男勝り）',          summary:'絆消耗値-2・獲得値-2、英雄と同時スキルチェックで+10',
+    actions:[{ name:'逆ギレ', isTurnAction:false, cost:'絆×3回', effect:'絆のゲインと肉体・気力のダメージ印を全消去' }] },
+  { no:56, name:'ツンデレ',               summary:'絆レベル+1、絆消耗値-2・獲得値+1',
+    actions:[{ name:'二人だけのひととき', isTurnAction:false, cost:'なし', effect:'2人きりの間、一時的に絆レベル+1、消耗値+4' }] },
+  { no:57, name:'モラルレス',              summary:'英雄の悪事NGを無視できる、禁忌歌術の抵抗修正+20',
+    actions:[{ name:'こっそりアクション', isTurnAction:true, cost:'絆×2回', effect:'仲間に気づかれずに行動可能' }] },
   { no:58, name:'破滅系',                 summary:'絆消耗値+2・獲得値-2、一部NG行動を選ばなくてよい' },
-  { no:59, name:'タフ',                   summary:'抵抗修正+10、肉体ゲージ+1' },
-  { no:60, name:'やり手',                 summary:'《鑑定》+5、20万G獲得、気力ゲージ+1' },
+  { no:59, name:'タフ',                   summary:'抵抗修正+10、肉体ゲージ+1',
+    actions:[{ name:'鋼の肉体', isTurnAction:true, cost:'気力×2回', effect:'戦闘中のみ負傷HP2倍、臨時防御値+3獲得' }] },
+  { no:60, name:'やり手',                 summary:'《鑑定》+5、20万G獲得、気力ゲージ+1',
+    actions:[
+      { name:'値切り', isTurnAction:true, cost:'気力×1回', effect:'アイテム価格を10～50%値切り可能' },
+      { name:'無心',   isTurnAction:true, cost:'絆×2回',   effect:'[絆レベルまたは階位の高い方]×1D10×1000GP獲得（1週間1回）' },
+    ]},
   { no:61, name:'歌術の素質',             summary:'気力消耗値+1、奏甲から歌術行使可能、歌術+1ランク' },
-  { no:62, name:'歌術の天才',             summary:'ランクスキップ可、歌術ブースト' },
+  { no:62, name:'歌術の天才',             summary:'ランクスキップ可、歌術ブースト',
+    actions:[{ name:'歌術ブースト', isTurnAction:true, cost:'肉体×1回', effect:'次の歌術に追加抵抗ペナルティ付与（-5/3レベル）' }] },
   { no:63, name:'忌み歌使い',             summary:'禁忌歌術習得可能' },
 ];
 
@@ -244,6 +296,7 @@ const SingerForm = {
       weapons: [],          // 戦闘系歌姫用武器
       armors:  [],          // 戦闘系歌姫用防具 [{name, defense, evasionPenalty}]
       song_items: [],        // 歌術アイテム [{no, name, effect, memo}] テーブル管理
+      singer_actions: [],    // 歌姫アクション [{name, is_turn_action, cost, effect, origin_no}]
       equipment: '',        // 一般アイテム・その他所持品（自由記述）
       ng_actions: '',
       notes: '',
@@ -260,7 +313,7 @@ const SingerForm = {
     ).join('');
     return `<tr data-sai="${i}">
       <td style="min-width:220px">
-        <select name="sab_no" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.25rem .4rem;border-radius:4px;font-size:.8rem" onchange="SingerForm._updateAbilitySummary(this)">
+        <select name="sab_no" data-prev-no="${ab.no||0}" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.25rem .4rem;border-radius:4px;font-size:.8rem" onchange="SingerForm._updateAbilitySummary(this)">
           <option value="">-- 選択 --</option>
           ${noOpts}
         </select>
@@ -272,10 +325,50 @@ const SingerForm = {
   },
 
   _updateAbilitySummary(sel) {
-    const tr = sel.closest('tr');
-    const td = tr?.querySelector('.sab-summary');
-    const no = parseInt(sel.value);
-    if (td) td.textContent = no ? (SINGER_ABILITIES_CATALOG.find(c=>c.no===no)?.summary||'') : '';
+    const td = sel.closest('tr')?.querySelector('.sab-summary');
+    const newNo = parseInt(sel.value) || 0;
+    const oldNo = parseInt(sel.dataset.prevNo) || 0;
+    if (td) td.textContent = newNo ? (SINGER_ABILITIES_CATALOG.find(c=>c.no===newNo)?.summary||'') : '';
+    sel.dataset.prevNo = newNo;
+
+    if (oldNo) {
+      document.querySelectorAll(`#singer-action-tbody tr[data-origin="${oldNo}"]`).forEach(r => r.remove());
+    }
+    if (newNo) {
+      const cat = SINGER_ABILITIES_CATALOG.find(c => c.no === newNo);
+      if (cat?.actions?.length) {
+        const tbody = document.getElementById('singer-action-tbody');
+        if (tbody) {
+          cat.actions.forEach(ac => {
+            const i = tbody.querySelectorAll('tr').length;
+            tbody.insertAdjacentHTML('beforeend',
+              this._actionRow({ name: ac.name, is_turn_action: ac.isTurnAction, cost: ac.cost, effect: ac.effect, origin_no: newNo }, i));
+          });
+        }
+      }
+    }
+  },
+
+  // 歌姫アクション行HTML
+  _actionRow(ac, i) {
+    const isAuto = (ac.origin_no > 0);
+    const esc = s => (s||'').replace(/"/g,'&quot;');
+    if (isAuto) {
+      return `<tr data-aci="${i}" data-origin="${ac.origin_no}">
+        <td style="padding:.2rem .4rem"><strong style="font-size:.85rem">${esc(ac.name)}</strong></td>
+        <td style="text-align:center;padding:.2rem">${ac.is_turn_action ? 'T' : ''}</td>
+        <td style="padding:.2rem .4rem;font-size:.8rem">${esc(ac.cost)}</td>
+        <td style="padding:.2rem .4rem;font-size:.78rem;color:var(--text-dim)">${esc(ac.effect)}</td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeAction(${i})">×</button></td>
+      </tr>`;
+    }
+    return `<tr data-aci="${i}" data-origin="0">
+      <td style="padding:.2rem .4rem"><input name="sac_name" value="${esc(ac.name)}" placeholder="アクション名" style="width:120px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.82rem"></td>
+      <td style="text-align:center;padding:.2rem"><input type="checkbox" name="sac_turn" ${ac.is_turn_action?'checked':''}></td>
+      <td style="padding:.2rem .4rem"><input name="sac_cost" value="${esc(ac.cost)}" placeholder="肉体×1回" style="width:100px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.82rem"></td>
+      <td style="padding:.2rem .4rem"><input name="sac_effect" value="${esc(ac.effect)}" placeholder="効果メモ" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.2rem .3rem;border-radius:4px;font-size:.82rem"></td>
+      <td><button type="button" class="btn btn-sm btn-danger" onclick="SingerForm.removeAction(${i})">×</button></td>
+    </tr>`;
   },
 
   // 英雄能力行HTML（歌姫取得分）
@@ -420,6 +513,10 @@ const SingerForm = {
     const legacyAbilityMemo = (!d.singer_abilities.length && d.abilities_memo)
       ? `<div class="alert alert-error" style="font-size:.8rem;margin-bottom:.5rem">⚠ 旧形式のテキストデータが存在します。以下を参照して上の表に移してください。<br><pre style="white-space:pre-wrap;margin-top:.3rem">${d.abilities_memo}</pre></div>`
       : '';
+
+    // 歌姫アクション行
+    if (!d.singer_actions) d.singer_actions = [];
+    const actionRows = d.singer_actions.map((ac, i) => this._actionRow(ac, i)).join('');
 
     // 歌術行
     const songRows = d.singer_songs.map((s, i) => this._songRow(s, i)).join('');
@@ -595,6 +692,26 @@ const SingerForm = {
             </table>
           </div>
           <button type="button" class="btn btn-sm btn-secondary" style="margin-top:.5rem" onclick="SingerForm.addHeroAbility()">＋ 英雄能力を追加</button>
+        </div>
+
+        <div class="form-section">
+          <h4>歌姫アクション</h4>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+              <thead>
+                <tr>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">アクション名</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:center;width:40px">T</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">コスト</th>
+                  <th style="padding:.3rem .4rem;border-bottom:1px solid var(--border);color:var(--text-dim);text-align:left">効果</th>
+                  <th style="width:36px"></th>
+                </tr>
+              </thead>
+              <tbody id="singer-action-tbody">${actionRows}</tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" style="margin-top:.5rem" onclick="SingerForm.addAction()">＋ アクションを追加</button>
+          <small style="color:var(--text-dim);display:block;margin-top:.3rem">※歌姫能力を選択すると対応するアクションが自動的に追加されます。T列はターンアクションを示します。</small>
         </div>
 
         <div class="form-section">
@@ -778,6 +895,28 @@ const SingerForm = {
       });
     }
 
+    // 歌姫アクション
+    const singer_actions = [];
+    for (const row of f.querySelectorAll('#singer-action-tbody tr')) {
+      const originNo = parseInt(row.dataset.origin) || 0;
+      if (originNo > 0) {
+        const cat = SINGER_ABILITIES_CATALOG.find(c => c.no === originNo);
+        const name = row.querySelector('td strong')?.textContent?.trim() || '';
+        if (!name) continue;
+        const catAc = cat?.actions?.find(a => a.name === name);
+        singer_actions.push({ name, is_turn_action: catAc?.isTurnAction || false,
+          cost: catAc?.cost || '', effect: catAc?.effect || '', origin_no: originNo });
+      } else {
+        const name = row.querySelector('[name=sac_name]')?.value?.trim() || '';
+        if (!name) continue;
+        singer_actions.push({ name,
+          is_turn_action: !!row.querySelector('[name=sac_turn]')?.checked,
+          cost:   row.querySelector('[name=sac_cost]')?.value?.trim() || '',
+          effect: row.querySelector('[name=sac_effect]')?.value?.trim() || '',
+          origin_no: 0 });
+      }
+    }
+
     return {
       name: g('sname'), origin: g('sorigin'), age: g('sage'),
       level: gi('slevel'), rank: gi('srank'), bond_level: gi('sbond'),
@@ -797,6 +936,7 @@ const SingerForm = {
       singer_abilities,
       hero_abilities,
       singer_songs,
+      singer_actions,
       weapons,
       armors,
       song_items,
@@ -821,6 +961,24 @@ const SingerForm = {
 
   removeAbility(i) {
     const rows = document.querySelectorAll('#singer-ability-tbody tr');
+    if (!rows[i]) return;
+    const abilityNo = parseInt(rows[i].querySelector('[name=sab_no]')?.value) || 0;
+    if (abilityNo) {
+      document.querySelectorAll(`#singer-action-tbody tr[data-origin="${abilityNo}"]`).forEach(r => r.remove());
+    }
+    rows[i].remove();
+  },
+
+  addAction() {
+    const tbody = document.getElementById('singer-action-tbody');
+    if (!tbody) return;
+    const i = tbody.querySelectorAll('tr').length;
+    tbody.insertAdjacentHTML('beforeend',
+      this._actionRow({ name:'', is_turn_action:false, cost:'', effect:'', origin_no:0 }, i));
+  },
+
+  removeAction(i) {
+    const rows = document.querySelectorAll('#singer-action-tbody tr');
     if (rows[i]) rows[i].remove();
   },
 
