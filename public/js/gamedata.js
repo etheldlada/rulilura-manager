@@ -95,7 +95,6 @@ function buildCcfoliaCommands(heroData) {
 
   // 修正値を取得
   const strMod = (d.abilities?.['筋力'] || 10) - 10; // 筋力修正（白兵ダメージ用）
-  const dmgMod = d.modifiers?.damage || 0;            // ダメージ修正（能力ボーナス等）
 
   // 能力チェック（パラメータ参照: {筋力修正} 等）
   for (const ab of ABILITY_NAMES) {
@@ -137,15 +136,14 @@ function buildCcfoliaCommands(heroData) {
       value: `1D100<=${baseHit}{${modLabel}} [${w.name}命中 基本${baseHit}+{${modLabel}}]`
     });
 
-    // ダメージ: 白兵＝筋力修正＋ダメージ修正、射撃＝ダメージ修正のみ
+    // ダメージ: 白兵＝筋力修正のみ、射撃＝なし
     if (w.damage) {
-      const dmgBonus = isMelee ? strMod + dmgMod : dmgMod;
       let dmgExpr = w.damage;
       let dmgNote = w.name;
-      if (dmgBonus !== 0) {
-        const sign = signedStr(dmgBonus);
+      if (isMelee && strMod !== 0) {
+        const sign = signedStr(strMod);
         dmgExpr = `${w.damage}${sign}`;
-        dmgNote = `${w.name} 修正${sign}込み`;
+        dmgNote = `${w.name} 筋力修正${sign}込み`;
       }
       cmds.push({
         label: `ダメージ:${w.name}`,

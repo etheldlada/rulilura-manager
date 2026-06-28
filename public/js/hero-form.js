@@ -67,7 +67,7 @@ const HeroForm = {
       // hp.normal/injured/mp は「能力値由来のベース値＋ボーナス」の合計（表示・保存値）
       // hp.*Bonus はレベルアップ・英雄能力（HPアップ等）による恒久加算分。能力値変更時もこの値は保持される
       hp: { normal: 0, injured: 0, mp: 0, normalBonus: 0, injuredBonus: 0, mpBonus: 0 },
-      modifiers: { melee: 0, ranged: 0, evasion: 0, evasionRaw: 0, resistance: 0, defense: 0, damage: 0 },
+      modifiers: { melee: 0, ranged: 0, evasion: 0, evasionRaw: 0, resistance: 0, defense: 0 },
       weapons: [],
       armors: [], // [{name, defense, evasionPenalty}] 防具・盾の個別管理
       hero_abilities: [], // [{no, name, memo}] 個別管理
@@ -269,7 +269,6 @@ const HeroForm = {
             <div class="form-group"><label>回避修正（10単位に変換・自動計算）</label><input type="number" name="mod_evasion" value="${d.modifiers.evasion}" id="mod-evasion" readonly></div>
             <div class="form-group"><label>抵抗修正</label><input type="number" name="mod_resistance" value="${d.modifiers.resistance}" id="mod-resistance"></div>
             <div class="form-group"><label>防御値（自動計算:防具合計）</label><input type="number" name="mod_defense" value="${d.modifiers.defense}" id="mod-defense"></div>
-            <div class="form-group"><label>ダメージ修正</label><input type="number" name="mod_damage" value="${d.modifiers.damage}"></div>
           </div>
           <small style="color:var(--text-dim);display:block;margin-top:.4rem">※回避修正は元値の「1の位」を切り捨て10単位にした値です（例: 元値-1〜-10は-10、-11〜-20は-20、元値1〜9は0）。</small>
         </div>
@@ -438,7 +437,7 @@ const HeroForm = {
         evasionRaw: gi('mod_evasion_raw'),
         evasion: HeroForm.floorTo10(gi('mod_evasion_raw')),
         resistance: gi('mod_resistance'),
-        defense: gi('mod_defense'), damage: gi('mod_damage'),
+        defense: gi('mod_defense'),
       },
       weapons,
       armors,

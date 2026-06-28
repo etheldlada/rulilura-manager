@@ -504,7 +504,6 @@ const App = {
               <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">回避修正</span><strong>${mods.evasion>=0?'+':''}${mods.evasion||0}</strong></div>
               <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">抵抗</span><strong>${mods.resistance>=0?'+':''}${mods.resistance||0}</strong></div>
               <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">防御値</span><strong>${mods.defense>=0?'+':''}${mods.defense||0}</strong></div>
-              <div style="display:flex;justify-content:space-between;padding:.2rem .4rem"><span style="color:var(--text-dim)">ダメージ修正</span><strong>${mods.damage>=0?'+':''}${mods.damage||0}</strong></div>
             </div>
           </div>
         </div>
