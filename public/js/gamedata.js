@@ -237,6 +237,7 @@ function buildArmorCcfoliaCommands(armorData) {
   // 武器攻撃
   for (const w of d.weapons || []) {
     if (!w.name) continue;
+    if (w.range === '-') continue;  // 非武器装備はコマンド生成しない
     const finalHit = w.finalHit || 0;
     if (finalHit > 0) {
       cmds.push({

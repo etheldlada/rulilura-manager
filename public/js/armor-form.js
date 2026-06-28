@@ -52,6 +52,7 @@ const ArmorForm = {
       armor_damage_mod: 0,
       defense: 0,
       hp: { small: 0, medium: 0, large: 0 },
+      use_location_hp: false,
       weapons: [],
       special_rules: '',
       notes: '',
@@ -96,6 +97,7 @@ const ArmorForm = {
         <td><input name="awn"   value="${w.name||''}"       placeholder="武器名" style="min-width:90px"></td>
         <td>
           <select name="awr" class="armor-weapon-range" style="width:55px">
+            <option value="-" ${w.range==='-'?'selected':''}>-</option>
             <option value="白" ${(w.range||'白')==='白'?'selected':''}>白</option>
             <option value="1" ${w.range==='1'?'selected':''}>1</option>
             <option value="2" ${w.range==='2'?'selected':''}>2</option>
@@ -207,6 +209,10 @@ const ArmorForm = {
             <div class="form-group"><label>大破HP</label><input type="number" name="ahp_large"  value="${d.hp.large}"></div>
           </div>
           <small style="color:var(--text-dim)">小破0→装備1つ破壊 / 中破0→乗員ダメージ / 大破0→機体破壊</small>
+          <label style="display:flex;align-items:center;gap:.4rem;margin-top:.5rem;font-size:.82rem;cursor:pointer">
+            <input type="checkbox" name="use_location_hp" ${d.use_location_hp ? 'checked' : ''}>
+            部位HP（上級ルール）をccfoliaに出力する
+          </label>
         </div>
 
         <!-- ===== 搭載武器 ===== -->
@@ -389,6 +395,7 @@ const ArmorForm = {
       armor_damage_mod: gi('armor_damage_mod'),
       defense: gi('adefense'),
       hp: { small: gi('ahp_small'), medium: gi('ahp_medium'), large: gi('ahp_large') },
+      use_location_hp: !!f.querySelector('[name=use_location_hp]')?.checked,
       weapons,
       special_rules: g('aspecial'),
       notes: g('anotes'),
@@ -415,7 +422,7 @@ const ArmorForm = {
     const range = tr.querySelector('[name=awr]')?.value || '白';
     const finalMelee  = (parseInt(document.querySelector('[name="hero_melee"]')?.value)  || 0) + (parseInt(document.querySelector('[name="armor_melee"]')?.value)  || 0);
     const finalRanged = (parseInt(document.querySelector('[name="hero_ranged"]')?.value) || 0) + (parseInt(document.querySelector('[name="armor_ranged"]')?.value) || 0);
-    const mod = (range === '白') ? finalMelee : finalRanged;
+    const mod = (range === '-') ? 0 : (range === '白') ? finalMelee : finalRanged;
 
     const modInput = tr.querySelector('[name=awmod]');
     if (modInput) modInput.value = mod;
@@ -461,6 +468,7 @@ const ArmorForm = {
       <td><input name="awn" placeholder="武器名" style="min-width:90px"></td>
       <td>
         <select name="awr" class="armor-weapon-range" style="width:55px">
+          <option value="-">-</option>
           <option value="白" selected>白</option>
           <option value="1">1</option>
           <option value="2">2</option>

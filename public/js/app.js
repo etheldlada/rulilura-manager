@@ -942,11 +942,15 @@ const App = {
             d.special_rules ? `\n[特殊ルール]\n${d.special_rules}` : '',
           ].filter(Boolean).join('\n'),
           commands: commands.map(c => c.value).join('\n'),
-          status: [
-            { label: '小破HP', value: d.hp?.small||0, max: d.hp?.small||0 },
-            { label: '中破HP', value: d.hp?.medium||0, max: d.hp?.medium||0 },
-            { label: '大破HP', value: d.hp?.large||0, max: d.hp?.large||0 },
-          ],
+          status: d.use_location_hp && (d.adv?.hit_locations || []).some(loc => !isNaN(parseInt(loc.hp)))
+            ? (d.adv.hit_locations || [])
+                .filter(loc => !isNaN(parseInt(loc.hp)))
+                .map(loc => ({ label: loc.part, value: parseInt(loc.hp), max: parseInt(loc.hp) }))
+            : [
+                { label: '小破HP', value: d.hp?.small||0, max: d.hp?.small||0 },
+                { label: '中破HP', value: d.hp?.medium||0, max: d.hp?.medium||0 },
+                { label: '大破HP', value: d.hp?.large||0, max: d.hp?.large||0 },
+              ],
           params: [
             { label: '白兵',       value: signedStr(finalMelee) },
             { label: '射撃',       value: signedStr(finalRanged) },
