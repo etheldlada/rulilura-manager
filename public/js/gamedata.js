@@ -115,6 +115,14 @@ function buildCcfoliaCommands(heroData) {
     }
   }
 
+  // 蟲化チェック（男性英雄向け選択ルール）
+  if (d.gender === '男性') {
+    cmds.push({
+      label: '蟲化チェック',
+      value: `1D100+{蟲化ポイント}-{生命力} [蟲化チェック]`
+    });
+  }
+
   // 攻撃ロール（個人武器）
   for (const w of d.weapons || []) {
     if (!w.name) continue;

@@ -527,7 +527,8 @@ const App = {
           ${Object.entries(d.skills).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem .5rem;background:var(--surface);border-radius:4px"><span>${k}</span><strong>${v} <span style="color:var(--text-dim)">(${50+v})</span></strong></div>`).join('')}
         </div></div>` : ''}
       ${d.equipment ? `<div class="form-section"><h4>一般アイテム</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.equipment}</pre></div>` : ''}
-      ${d.notes ? `<div class="form-section"><h4>メモ</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.notes}</pre></div>` : ''}`;
+      ${d.notes ? `<div class="form-section"><h4>メモ</h4><pre style="white-space:pre-wrap;font-size:.83rem;font-family:inherit">${d.notes}</pre></div>` : ''}
+      ${(d.mushika?.points || d.mushika?.level) ? `<div class="form-section"><h4>蟲化</h4><div style="display:flex;gap:1.5rem"><span>蟲化ポイント：${d.mushika.points||0}</span><span>蟲化レベル：${d.mushika.level||0}</span></div></div>` : ''}`;
   },
 
   singerDetailHTML(d, item) {
@@ -858,6 +859,7 @@ const App = {
             { label: '通常HP', value: d.hp?.normal||0, max: d.hp?.normal||0 },
             { label: '負傷HP', value: d.hp?.injured||0, max: d.hp?.injured||0 },
             { label: 'MP', value: d.hp?.mp||0, max: d.hp?.mp||0 },
+            ...(d.gender === '男性' ? [{ label: '蟲化ポイント', value: d.mushika?.points||0, max: d.mushika?.points||0 }] : []),
           ],
           params: [
             ...ABILITY_NAMES.map(n => ({ label: n, value: String(d.abilities?.[n]||10) })),
@@ -868,6 +870,7 @@ const App = {
             { label: '白兵修正', value: signedStr(d.modifiers?.melee||0) },
             { label: '射撃修正', value: signedStr(d.modifiers?.ranged||0) },
             { label: '抵抗修正', value: signedStr(d.modifiers?.resistance||0) },
+            ...(d.gender === '男性' ? [{ label: '蟲化ポイント', value: String(d.mushika?.points||0) }] : []),
           ],
         }
       };

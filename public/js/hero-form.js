@@ -74,6 +74,7 @@ const HeroForm = {
       song_items: [], // 歌術アイテム [{no, name, effect, memo}] テーブル管理
       equipment: '', // 一般アイテム・その他所持品（自由記述）
       notes: '',
+      mushika: { points: 0, level: 0 }, // 蟲化（選択ルール・男性英雄）
       // 旧データ互換
       abilities_memo: '',
     };
@@ -348,6 +349,20 @@ const HeroForm = {
           <div class="form-group"><label>一般アイテム（歌術アイテム以外の所持品）</label><textarea name="equipment" rows="3" placeholder="冒険者セット・現世武器など、改行して複数記入できます...">${d.equipment || ''}</textarea></div>
           <div class="form-group"><label>メモ</label><textarea name="notes" rows="3" placeholder="自由メモ...">${d.notes || ''}</textarea></div>
         </div>
+
+        <div class="form-section">
+          <h4>蟲化 <small style="color:var(--text-dim);font-weight:normal">選択ルール（男性英雄）</small></h4>
+          <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:flex-end">
+            <div class="form-group">
+              <label>蟲化ポイント</label>
+              <input type="number" name="mushika_points" value="${d.mushika?.points||0}" min="0" style="width:80px">
+            </div>
+            <div class="form-group">
+              <label>蟲化レベル</label>
+              <input type="number" name="mushika_level" value="${d.mushika?.level||0}" min="0" style="width:80px">
+            </div>
+          </div>
+        </div>
       </form>`;
   },
 
@@ -431,6 +446,10 @@ const HeroForm = {
       song_items,
       equipment: g('equipment'),
       notes:     g('notes'),
+      mushika: {
+        points: gi('mushika_points'),
+        level:  gi('mushika_level'),
+      },
       abilities_memo: '', // 旧フィールドはクリア
     };
   },
