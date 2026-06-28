@@ -226,13 +226,11 @@ function buildArmorCcfoliaCommands(armorData) {
   const dmgSign    = damageMod >= 0 ? `+${damageMod}` : `${damageMod}`;
   const finalRecon = (d.hero_recon || 0) + (d.armor_recon || 0);
 
-  // 偵察チェック
-  if (finalRecon > 0) {
-    cmds.push({
-      label: '偵察',
-      value: `1D100<=${finalRecon} [偵察チェック 偵察${finalRecon}]`
-    });
-  }
+  // 偵察チェック（基本値50＋修正値）
+  cmds.push({
+    label: '偵察',
+    value: `1D100<=50+{偵察} [偵察チェック 修正{偵察}]`
+  });
 
   // 武器攻撃
   for (const w of d.weapons || []) {
