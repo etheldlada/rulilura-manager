@@ -50,4 +50,35 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// 管理者パスワードリセット
+router.post('/admin-reset', async (req, res) => {
+  try {
+    const { username, newPassword, adminSecret } = req.body;
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+    if (!ADMIN_SECRET) {
+      return res.status(403).json({ error: '管理者パスワードリセットは無効です（ADMIN_SECRET未設定）' });
+    }
+    if (!adminSecret || adminSecret !== ADMIN_SECRET) {
+      return res.status(403).json({ error: '管理者シークレットが正しくありません' });
+    }
+    if (!username || !newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'ユーザー名と6文字以上のパスワードを入力してください' });
+    }
+
+    const user = await db.get('SELECT id FROM users WHERE username = ?', [username]);
+    if (!user) {
+      return res.status(404).json({ error: 'ユーザーが見つかりません' });
+    }
+
+    const hash = bcrypt.hashSync(newPassword, 10);
+    await db.run('UPDATE users SET password_hash = ? WHERE username = ?', [hash, username]);
+
+    res.json({ message: 'パスワードをリセットしました' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'サーバーエラーが発生しました' });
+  }
+});
+
 module.exports = router;

@@ -53,7 +53,23 @@ const App = {
       <div id="auth-alert"></div>
       <div class="form-group"><label>ユーザー名</label><input id="auth-username" placeholder="username" autocomplete="username"></div>
       <div class="form-group"><label>パスワード</label><input id="auth-password" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')App.doLogin()"></div>
-      <button class="btn btn-primary btn-full" onclick="App.doLogin()">ログイン</button>`;
+      <button class="btn btn-primary btn-full" onclick="App.doLogin()">ログイン</button>
+      <p style="text-align:center;margin-top:10px">
+        <a href="#" onclick="App.switchAuthTab('admin-reset');return false" style="font-size:0.82em;color:var(--text-dim)">パスワードを忘れた方（管理者）</a>
+      </p>`;
+  },
+
+  adminResetForm() {
+    return `
+      <div id="auth-alert"></div>
+      <p style="font-size:0.85em;color:var(--text-dim);margin-bottom:12px">管理者シークレット（ADMIN_SECRET）を入力してパスワードをリセットします。</p>
+      <div class="form-group"><label>ユーザー名</label><input id="auth-username" placeholder="username" autocomplete="username"></div>
+      <div class="form-group"><label>新しいパスワード（6文字以上）</label><input id="auth-password" type="password" autocomplete="new-password"></div>
+      <div class="form-group"><label>管理者シークレット</label><input id="auth-admin-secret" type="password" onkeydown="if(event.key==='Enter')App.doAdminReset()"></div>
+      <button class="btn btn-primary btn-full" onclick="App.doAdminReset()">パスワードをリセット</button>
+      <p style="text-align:center;margin-top:10px">
+        <a href="#" onclick="App.switchAuthTab('login');return false" style="font-size:0.82em;color:var(--text-dim)">← ログインに戻る</a>
+      </p>`;
   },
 
   registerForm() {
@@ -67,7 +83,11 @@ const App = {
   switchAuthTab(tab) {
     document.getElementById('tab-login').classList.toggle('active', tab==='login');
     document.getElementById('tab-register').classList.toggle('active', tab==='register');
-    document.getElementById('auth-form-area').innerHTML = tab==='login' ? this.loginForm() : this.registerForm();
+    if (tab === 'admin-reset') {
+      document.getElementById('auth-form-area').innerHTML = this.adminResetForm();
+    } else {
+      document.getElementById('auth-form-area').innerHTML = tab==='login' ? this.loginForm() : this.registerForm();
+    }
   },
 
   async doLogin() {
@@ -89,6 +109,19 @@ const App = {
       const res = await API.post('/api/auth/register', { username: u, password: p });
       API.setToken(res.token);
       this.goto('mypage');
+    } catch(e) {
+      document.getElementById('auth-alert').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    }
+  },
+
+  async doAdminReset() {
+    const u = document.getElementById('auth-username')?.value;
+    const p = document.getElementById('auth-password')?.value;
+    const s = document.getElementById('auth-admin-secret')?.value;
+    try {
+      const res = await API.post('/api/auth/admin-reset', { username: u, newPassword: p, adminSecret: s });
+      document.getElementById('auth-alert').innerHTML = `<div class="alert alert-success">${res.message} ログインしてください。</div>`;
+      setTimeout(() => this.switchAuthTab('login'), 1500);
     } catch(e) {
       document.getElementById('auth-alert').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
     }
