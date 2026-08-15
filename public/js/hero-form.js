@@ -210,7 +210,7 @@ const HeroForm = {
         </div>
 
         <div class="form-section">
-          <h4>能力値（合計70ポイント）</h4>
+          <h4>能力値（合計70ポイントorダイスロール）</h4>
           <div class="form-row" id="ability-inputs">${abilityInputs}</div>
           <div id="auto-calc" style="font-size:.8rem;color:var(--text-dim);margin-top:.5rem"></div>
         </div>
@@ -276,7 +276,7 @@ const HeroForm = {
         </div>
 
         <div class="form-section">
-          <h4>スキル（8つ選択・合計80ポイント）</h4>
+          <h4>スキル（作成時8つ選択・合計80ポイント）</h4>
           <div id="skill-point-info" style="font-size:.8rem;color:var(--accent2);margin-bottom:.5rem"></div>
           <table class="skill-table">
             <thead><tr><th>スキル名</th><th>分類</th><th>スキル値</th><th>成功値</th></tr></thead>
@@ -641,7 +641,7 @@ const HeroForm = {
       const total = SKILLS.reduce((sum, s) => sum + (parseInt(document.querySelector(`[name="skill_${s.name}"]`)?.value) || 0), 0);
       const count = SKILLS.filter(s => (parseInt(document.querySelector(`[name="skill_${s.name}"]`)?.value) || 0) > 0).length;
       const info = document.getElementById('skill-point-info');
-      if (info) info.textContent = `${count}スキル選択中 / 合計${total}ポイント（推奨8スキル・80ポイント）`;
+      if (info) info.textContent = `${count}スキル選択中 / 合計${total}ポイント（初期制作時：必須8スキル・80ポイント）`;
       document.querySelectorAll('#skill-tbody tr').forEach(row => {
         const input = row.querySelector('input[type=number]');
         const lastTd = row.cells[3];
