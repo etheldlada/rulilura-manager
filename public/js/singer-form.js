@@ -59,7 +59,8 @@ const SINGER_ABILITIES_CATALOG = [
     actions:[{ name:'失踪', isTurnAction:true, cost:'なし', effect:'どこかに消える（戦闘・ピンチ時は不可）' }] },
   { no:34, name:'電波',                   summary:'気力ゲージ+1、抵抗修正+10',
     actions:[{ name:'ご託宣', isTurnAction:true, cost:'気力×1回', effect:'占いで回答を得る（正確性は不保証）' }] },
-  { no:35, name:'ワガママ/退屈娘',         summary:'絆NG行動追加し英雄能力1つ授与か歌姫能力2つ獲得' },
+  { no:35, name:'ワガママ/退屈娘',         summary:'絆NG行動追加し英雄能力1つ授与か歌姫能力2つ獲得',
+    actions:[{ name:'失踪', isTurnAction:true, cost:'なし', effect:'どこかに消える（戦闘・ピンチ時は不可）' }] },
   { no:36, name:'イケイケ',               summary:'気力ゲージ+1、特殊起動効果1.5倍',
     actions:[{ name:'ＧＯＧＯ！', isTurnAction:false, cost:'なし', effect:'1回の戦闘につき1回使用、消耗値+2' }] },
   { no:37, name:'バカ',                   summary:'肉体・気力消耗値+1、絆獲得値+1' },
@@ -119,7 +120,7 @@ const SINGER_ABILITIES_CATALOG = [
   { no:63, name:'忌み歌使い',             summary:'禁忌歌術習得可能' },
   { no:82, name:'子供・チビ', summary:'1回しか選べない歌姫能力を2回取得できる。38,42,43は選択不能。' },
   { no:83, name:'中途入学(ノラ歌姫)', summary:'歌姫作成時に英雄と同じ用に80ポイントを割り振ってスキルを選べる。' },
-  { no:84, name:'ヴァッサァマイン出身', summary:'知力+1、歌術知識+5 歌術を3ランク分取得できるようになる' },
+  { no:84, name:'ヴァッサァマイン出身', summary:'知力+1、歌術知識+5 歌術を3ランク分取得できるようになる ボーナスを含めた気力消耗値が12以下なら、歌術使用時のみ気力消耗値+1' },
   { no:85, name:'シュピルドーゼ出身', summary:'戦闘スキル一つに+10、通常・負傷HPに+5 肉体ゲージ+1 シュピルドーゼの領内ならTL+1の個人装備武器まで買える' },
   { no:86, name:'ファゴッツ出身', summary:'生命力+1、交渉+10、盗賊・恫喝・アーカイア知識・鑑定のいずれか2つに+5、レベルアップ時好きな非戦闘スキル一つに+5' },
 ];
